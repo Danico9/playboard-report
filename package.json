@@ -1,0 +1,55 @@
+{
+  "name": "playboard-report",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Dashboard local en modo oscuro para analizar el histórico de reportes HTML de Playwright (por día, semana, mes y año) y consultar notas Markdown.",
+  "license": "MIT",
+  "author": "Daniel Ciscar Blazquez",
+  "keywords": [
+    "playwright",
+    "test-report",
+    "dashboard",
+    "e2e",
+    "react",
+    "vite"
+  ],
+  "type": "module",
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "demo": "node scripts/demo.mjs",
+    "demo:fresh": "node scripts/demo.mjs --fresh",
+    "build": "vite build",
+    "preview": "vite preview",
+    "ingest": "node scripts/ingest-reports.mjs",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "ansi-to-html": "^0.7.2",
+    "date-fns": "^4.4.0",
+    "fflate": "^0.8.3",
+    "github-slugger": "^2.0.0",
+    "highlight.js": "^11.12.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "react-markdown": "^10.1.0",
+    "react-router": "^7.18.4",
+    "recharts": "^3.10.1",
+    "rehype-highlight": "^7.0.2",
+    "rehype-slug": "^6.0.0",
+    "remark-gfm": "^4.0.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
+    "@vitejs/plugin-react": "^6.1.1",
+    "eslint": "^10.10.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.6",
+    "globals": "^17.12.0",
+    "vite": "^8.3.0"
+  }
+}

@@ -1,0 +1,93 @@
+/* ─── Tokens de diseño ─── */
+/* Modo oscuro por defecto; el claro se activa con <html data-theme="light"> (src/lib/theme.js). */
+/* Los colores de las gráficas SVG se repiten en src/config/status.js (CHART_THEMES y STATUS). */
+
+:root {
+  color-scheme: dark;
+
+  --bg: #0d0d0d;
+  --surface: #1a1a19;
+  --surface-2: #232321;
+  --surface-3: #2c2c2a;
+  --border: rgba(255, 255, 255, 0.1);
+  --border-strong: rgba(255, 255, 255, 0.18);
+  --grid: #2c2c2a;
+  --axis: #383835;
+  --hover: rgba(255, 255, 255, 0.025);
+  --zebra: rgba(255, 255, 255, 0.018);
+  --shadow: rgba(0, 0, 0, 0.45);
+
+  --text: #ffffff;
+  --text-2: #c3c2b7;
+  --muted: #898781;
+  --text-md: #e4e3dc;
+
+  --accent: #3987e5;
+  --accent-soft: rgba(57, 135, 229, 0.16);
+  --accent-border: rgba(57, 135, 229, 0.35);
+
+  --passed: #0ca30c;
+  --flaky: #fab219;
+  --failed: #d03b3b;
+  --skipped: #6b7280;
+  --passed-soft: rgba(12, 163, 12, 0.14);
+  --flaky-soft: rgba(250, 178, 25, 0.14);
+  --failed-soft: rgba(208, 59, 59, 0.16);
+  --skipped-soft: rgba(107, 114, 128, 0.18);
+  --passed-text: #6fd66f;
+  --flaky-text: #fbc964;
+  --failed-text: #f08b8b;
+  --skipped-text: #b8bdc7;
+  --info-text: #9cc3f2;
+  --bad-text: #e66767;
+  --flaky-border: rgba(250, 178, 25, 0.35);
+
+  /* Bloques de código y errores: oscuros en ambos modos (los colores ANSI y de sintaxis están pensados para fondo oscuro) */
+  --code-bg: #111110;
+  --code-text: #d6d5cd;
+
+  --radius: 10px;
+  --radius-sm: 6px;
+  --gap: 16px;
+  --sidebar-w: 224px;
+
+  --font: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --mono: ui-monospace, 'Cascadia Code', 'JetBrains Mono', Consolas, monospace;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  --bg: #f4f4f1;
+  --surface: #ffffff;
+  --surface-2: #f0efec;
+  --surface-3: #e1e0d9;
+  --border: rgba(11, 11, 11, 0.1);
+  --border-strong: rgba(11, 11, 11, 0.2);
+  --grid: #e8e7e2;
+  --axis: #c3c2b7;
+  --hover: rgba(11, 11, 11, 0.03);
+  --zebra: rgba(11, 11, 11, 0.02);
+  --shadow: rgba(0, 0, 0, 0.15);
+
+  --text: #0b0b0b;
+  --text-2: #52514e;
+  --muted: #6d6c67;
+  --text-md: #1f1f1d;
+
+  --accent: #2a78d6;
+  --accent-soft: rgba(42, 120, 214, 0.12);
+  --accent-border: rgba(42, 120, 214, 0.35);
+
+  --passed-soft: rgba(12, 163, 12, 0.12);
+  --flaky-soft: rgba(250, 178, 25, 0.18);
+  --failed-soft: rgba(208, 59, 59, 0.12);
+  --skipped-soft: rgba(107, 114, 128, 0.14);
+  --passed-text: #006300;
+  --flaky-text: #7a4f00;
+  --failed-text: #b42323;
+  --skipped-text: #4b5563;
+  --info-text: #1c5cab;
+  --bad-text: #c62828;
+  --flaky-border: rgba(201, 133, 0, 0.45);
+}

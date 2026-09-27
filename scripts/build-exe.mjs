@@ -7,8 +7,11 @@
 // El resultado queda en release/playboard-report-<sistema>-<arquitectura>/, con las carpetas reports/ y notes/ vacías al lado.
 // El ejecutable es para el sistema en el que se construye: para Windows, constrúyelo en Windows; para macOS, en macOS, etc.
 //
-// Por defecto incluye tu configuración personal (src/config/*.local.js: nombres de módulos, categorías de notas…).
-// Con --no-local-config se genera un ejecutable genérico, sin ella: úsalo si lo vas a compartir fuera de tu equipo.
+// Configuración personal (src/config/*.local.js: nombres de módulos, alias, reglas, categorías de notas…):
+//   npm run build:exe                        → la incluye: los módulos y las notas se ven como en npm run dev.
+//   npm run build:exe -- --no-local-config   → ejecutable genérico, sin ella: úsalo si lo vas a compartir fuera de tu equipo.
+// En ningún caso se incrustan reportes ni notas: se leen de reports/ y notes/ junto al ejecutable.
+// El «--» hace falta para que npm pase la opción al script, y la opción debe escribirse exacta: si no se reconoce, se incluye la configuración.
 
 import fs from 'node:fs'
 import path from 'node:path'

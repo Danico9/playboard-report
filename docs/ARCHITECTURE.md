@@ -82,7 +82,14 @@ Todas las rutas de ficheros se validan para no salir de su carpeta. `createApi()
 
 El resultado va a `release/playboard-report-<sistema>-<arquitectura>/`, con `reports/`, `notes/` y un `README.txt`. Al arrancar, `server/standalone.mjs` fija `PLAYBOARD_ROOT` en la carpeta del ejecutable (antes de cargar la ingesta, por eso la importa dinámicamente), sirve la app desde los *assets* incrustados, escucha solo en `127.0.0.1` (puerto 4174 o el siguiente libre) y abre el navegador. `npm start` usa el mismo servidor leyendo `dist/` del proyecto.
 
-Con `--no-local-config` se define `VITE_PLAYBOARD_NO_LOCAL=1` y los `*.local.js` no se incluyen en la compilación.
+Configuración local (`src/config/*.local.js`):
+
+- `npm run build:exe`: se incluyen en la compilación, igual que en `npm run dev`. Los nombres de módulos y las categorías de notas quedan dentro del ejecutable.
+- `npm run build:exe -- --no-local-config`: se define `VITE_PLAYBOARD_NO_LOCAL=1` y `config/modules.js` y `config/notes.js` ignoran los `*.local.js`
+  (igual que en la demo), así que no llegan al bundle. Es el ejecutable genérico para compartir fuera del equipo.
+- En ningún caso se incrustan reportes ni notas: se leen de `reports/` y `notes/` junto al ejecutable.
+- El `--` es necesario para que npm pase la opción al script, y esta se compara de forma exacta (`process.argv.includes`):
+  una opción mal escrita se ignora y se genera el ejecutable con la configuración local. El script avisa al final de cuál ha generado.
 
 ## Variables de entorno
 

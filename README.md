@@ -213,6 +213,22 @@ npm run build:exe                        # incluye tu configuración de src/conf
 npm run build:exe -- --no-local-config   # ejecutable genérico, para compartir fuera de tu equipo
 ```
 
+### ¿Con o sin tu configuración?
+
+Los dos comandos generan el mismo ejecutable. Solo cambia si lleva dentro tu configuración personal, es decir, los ficheros `src/config/*.local.js`:
+
+| | `npm run build:exe` | `npm run build:exe -- --no-local-config` |
+|---|---|---|
+| `modules.local.js`: nombres legibles de los módulos, alias y reglas `MODULE_RULES` | Incluido: los módulos se ven como en `npm run dev` (p. ej. «Carrito») | No incluido: los módulos se siguen detectando (tag, convención de nombre o carpeta), pero se muestran con su identificador en mayúsculas (p. ej. `CART`) |
+| `notes.local.js`: categorías de notas y nombres de las notas especiales | Incluido | No incluido: se usan las categorías y nombres por defecto |
+| Para qué sirve | Para usarlo tú (o dentro de tu equipo) | Para compartirlo fuera de tu equipo sin que lleve nombres de tu suite o tu empresa |
+
+- **Los reportes y las notas nunca van dentro del ejecutable**, en ninguno de los dos casos: siempre se leen de las carpetas `reports/` y `notes/` que tiene al lado. La diferencia es solo cómo se muestran los nombres.
+- El `--` del medio es necesario: le dice a npm que la opción es para el script. Sin él, npm se queda la opción y no llega.
+- La opción tiene que escribirse completa, `--no-local-config`. Si no se reconoce (por ejemplo, `--no-local-confi`), se genera el ejecutable normal, **con** tu configuración.
+- Al terminar, el script indica qué tipo de ejecutable ha generado si tienes ficheros `*.local.js`: «Ejecutable genérico…» o «Aviso: el ejecutable incluye tu configuración…».
+- Si no tienes ningún `*.local.js`, los dos comandos dan exactamente el mismo resultado.
+
 Se genera la carpeta `release/playboard-report-<sistema>-<arquitectura>/` con:
 
 ```

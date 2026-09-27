@@ -102,7 +102,7 @@ export function moduleRows(rows, runIndexes) {
   for (const r of rows) {
     let m = map.get(r.module)
     if (!m) {
-      m = { module: r.module, tests: 0, total: 0, passed: 0, flaky: 0, failed: 0, skipped: 0, perRun: new Map(), worst: [] }
+      m = { module: r.module, tests: 0, total: 0, passed: 0, flaky: 0, failed: 0, skipped: 0, perRun: new Map(), worst: [], rows: [] }
       map.set(r.module, m)
     }
     m.tests++
@@ -114,12 +114,14 @@ export function moduleRows(rows, runIndexes) {
       pr[outcome]++
       m.perRun.set(runIndex, pr)
     }
+    m.rows.push(r)
     if (r.failed || r.flaky) m.worst.push(r)
   }
   const out = [...map.values()]
   for (const m of out) {
     m.rate = successRate(m)
     m.worst.sort((a, b) => b.failed - a.failed || b.flaky - a.flaky)
+    m.rows.sort((a, b) => b.failed - a.failed || b.flaky - a.flaky || b.skipped - a.skipped || a.meta.title.localeCompare(b.meta.title))
     m.runs = runIndexes.map((i) => [i, m.perRun.get(i)])
   }
   return out.sort((a, b) => (a.rate ?? 1) - (b.rate ?? 1))

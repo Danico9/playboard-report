@@ -111,6 +111,11 @@ Con `--no-local-config` se define `VITE_PLAYBOARD_NO_LOCAL=1` y los `*.local.js`
 
 - `lib/store.js`: caché de peticiones con `useSyncExternalStore`. Al recargar se mantienen los datos anteriores hasta que llegan los nuevos.
 - `lib/usePeriod.js` y `lib/period.js`: el periodo (`?p=week&d=2026-09-22`, `?p=range&from=…&to=…`) vive en la URL.
+  Los filtros de cada pantalla también, junto al periodo, con `lib/useUrlFilters.js`: el índice de Tests (`?q=…&s=failed&mod=…&proj=…`)
+  y la pestaña «Tests por módulo» de Módulos (`?tab=tests&f=…&view=module|file|list&sort=…`). `DateRangeFilter` (en `PeriodToolbar.jsx`) cambia el periodo a «Rango».
+- `pages/Tests.jsx`: índice tipo reporte de Playwright (carpeta → fichero → `describe` → test). Los tests se ordenan por la línea de `location`.
+- `components/TestStatsTable.jsx`: tabla de estadísticas por test, agrupable por módulo o fichero; la usa la pestaña «Tests por módulo» de `pages/Modules.jsx`.
+- `lib/importResults.js`: resultados de «Importar» fuera del componente (y en `sessionStorage`), para que sigan a la vista al cambiar de pantalla hasta que se cierren.
 - `lib/stats.js`: cálculos puros (estadísticas por test, módulo y firma de error, y comparación entre ejecuciones).
 - `config/`: estados y colores, módulos y notas. Cada usuario los adapta con `*.local.js` (en el `.gitignore`), que se cargan con `import.meta.glob` si existen.
 - `lib/theme.js`: tema oscuro (por defecto) o claro, en `<html data-theme>`. Los tokens de cada tema están en `styles/tokens.css`, y los colores de las gráficas SVG en `config/status.js` (`CHART_THEMES`).

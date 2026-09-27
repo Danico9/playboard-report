@@ -14,11 +14,13 @@ El reporte HTML de Playwright es muy completo, pero solo muestra una ejecución.
 | | |
 |---|---|
 | ![Detalle de una ejecución con el panel de un test fallido](docs/screenshots/run-dark.png) | ![Tests con su historial por ejecución](docs/screenshots/tests-dark.png) |
-| **Ejecución**: panel del test con error, capturas y reintentos | **Tests**: qué suele fallar, de un vistazo |
+| **Ejecución**: panel del test con error, capturas y reintentos | **Tests**: índice como el reporte de Playwright, con su historial |
 | ![Calendario coloreado por % de éxito](docs/screenshots/calendar-dark.png) | ![Errores agrupados por tipo](docs/screenshots/errors-dark.png) |
 | **Calendario** | **Errores** agrupados |
 | ![Importar zips de artefactos](docs/screenshots/import-dark.png) | ![Visor de notas](docs/screenshots/notes-dark.png) |
 | **Importar** zips del CI | **Notas** en Markdown |
+| ![Módulos con uno desplegado](docs/screenshots/modules-dark.png) | |
+| **Módulos**: salud de cada área y todos sus tests | |
 | ![Resumen en modo claro](docs/screenshots/overview-light.png) | ![Resumen con la interfaz en inglés](docs/screenshots/overview-dark-en.png) |
 | **Modo claro** | **Interfaz en inglés** |
 
@@ -36,10 +38,15 @@ El reporte HTML de Playwright es muy completo, pero solo muestra una ejecución.
 - **Detalle de ejecución:** desglose por módulo y lista de tests con filtros y agrupación. Cada test abre un panel con:
   - el error con sus colores, las capturas, el contexto del error y el stdout;
   - los reintentos y su historial en todas las ejecuciones.
-- **Tests:** estadísticas de cada test y una fila de cuadrados de colores, uno por ejecución, para ver de un vistazo qué suele fallar.
+- **Tests:** índice de todos los tests como en el reporte de Playwright (carpeta → fichero → `describe` → test, en el orden del código), pero con los datos de todo el periodo.
+  - Cada test muestra su estado en la última ejecución, su % de éxito, fallos, flaky, duración media y una fila de cuadrados de colores, uno por ejecución.
+  - Filtros por estado con contadores (como en Playwright) y «Inestables en el periodo», buscador (test, fichero, tag o módulo), módulo, proyecto y rango de fechas con atajos (últimos 7, 30 o 90 días).
+  - Carpetas y ficheros se pliegan y despliegan. Los filtros van en la URL: se conservan al abrir un test y volver atrás.
 - **Errores:** agrupados por tipo (mensaje, locator y línea donde falla), con los tests afectados y su evolución.
-- **Módulos:** % de éxito por área funcional y sus tests más problemáticos.
-- **Importar:** eliges qué zips de artefactos del CI descomprimir. La app comprueba que cada reporte se lee bien y después borra el zip.
+- **Módulos:** dos pestañas.
+  - **Resumen:** % de éxito por área funcional y sus tests más problemáticos. Al pulsar un módulo se despliegan todos sus tests.
+  - **Tests por módulo:** tabla de estadísticas de cada test, agrupada por módulo o por fichero (o en lista), ordenable por columnas.
+- **Importar:** eliges qué zips de artefactos del CI descomprimir. La app comprueba que cada reporte se lee bien y después borra el zip. El resultado se queda a la vista (aunque cambies de pantalla) hasta que lo cierras, uno a uno o todos a la vez.
 - **Notas:** visor Markdown (tablas, código resaltado, índice lateral y buscador) que se actualiza al editar los ficheros.
 - **Modo oscuro y claro:** oscuro por defecto; se cambia con el botón del menú lateral y se recuerda en el navegador.
 - **Castellano e inglés:** selector ES/EN en el menú lateral, con fechas y números en el formato de cada idioma.

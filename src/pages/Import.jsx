@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 import { ReportsHelp } from '../components/Help'
 import { Empty, ErrorBox, Loading } from '../components/ui'
 import { refreshData, refreshZips, useInfo, useSummary, useZips } from '../lib/store'
+import { addImportResults, clearImportResults, dismissImportResult, useImportResults } from '../lib/importResults'
 import { fmtDate } from '../lib/format'
 import { numberLocale, t } from '../i18n'
 
@@ -14,6 +15,8 @@ function runLabel(id, timeZone) {
   const fmt = new Intl.DateTimeFormat(numberLocale(), { timeZone, dateStyle: 'medium', timeStyle: 'short' })
   return `${fmt.format(date)}${m[7] ? ` · ${m[7]}` : ''}`
 }
+
+const fmtTime = (ms) => new Intl.DateTimeFormat(numberLocale(), { timeStyle: 'short' }).format(new Date(ms))
 
 const fmtSize = (b) => (b > 1e6 ? `${(b / 1e6).toLocaleString(numberLocale(), { maximumFractionDigits: 1 })} MB` : `${Math.round(b / 1e3)} KB`)
 
@@ -41,7 +44,7 @@ export default function Import() {
   const [selected, setSelected] = useState(() => new Set())
   const [touched, setTouched] = useState(false)
   const [busy, setBusy] = useState(false)
-  const [results, setResults] = useState(null)
+  const results = useImportResults()
   const [error, setError] = useState(null)
 
   const pending = useMemo(() => items.filter((i) => itemState(i).label === 'Pendiente').map(itemKey), [items])
@@ -73,7 +76,6 @@ export default function Import() {
     if (!window.confirm(`${t('Se van a importar {n} elemento(s).', { n: chosen.length })}\n\n${lines.join('\n')}\n\n${t('¿Continuar?')}`)) return
     setBusy(true)
     setError(null)
-    setResults(null)
     try {
       const r = await fetch('/api/zips/import', {
         method: 'POST',
@@ -81,7 +83,7 @@ export default function Import() {
         body: JSON.stringify({ items: chosen.map(({ kind, name }) => ({ kind, name })) }),
       })
       if (!r.ok) throw new Error(`${r.status} ${await r.text()}`)
-      setResults(await r.json())
+      addImportResults(await r.json())
       setSelected(new Set())
       setTouched(false)
     } catch (e) {
@@ -108,15 +110,21 @@ export default function Import() {
 
       <ReportsHelp open={!items.length && !summary?.runs.length} />
 
-      {results && (
+      {results.length > 0 && (
         <div className="card">
-          <div className="card-head"><h2>{t('Resultado')}</h2><button className="btn" onClick={() => setResults(null)}>{t('Cerrar')}</button></div>
+          <div className="card-head">
+            <div>
+              <h2>{t('Resultado')}</h2>
+              <p>{t('Se mantiene hasta que lo cierres, aunque cambies de pantalla.')}</p>
+            </div>
+            {results.length > 1 && <button className="btn" onClick={clearImportResults}>{t('Cerrar todos ({n})', { n: results.length })}</button>}
+          </div>
           <ul className="list">
             {results.map((r) => (
-              <li key={`${r.kind}:${r.file}`}>
+              <li key={r.id}>
                 <span className={`chip ${r.error || r.failed.length ? 'failed' : 'passed'}`}>{r.error || r.failed.length ? `✕ ${t('Error')}` : `✓ ${t('Hecho')}`}</span>
                 <div className="grow">
-                  <b>{r.file}</b>
+                  <b>{r.file}</b> <span className="muted small">· {fmtTime(r.at)}</span>
                   <div className="small text-2">
                     {r.error && <>{t('No se pudo procesar:')} {r.error}. {kept(r)}</>}
                     {r.imported.length > 0 && <>{t('Importado:')} {r.imported.map(label).join(', ')}. </>}
@@ -126,6 +134,7 @@ export default function Import() {
                   </div>
                 </div>
                 {r.imported[0] && <Link className="btn" to={`/ejecucion/${encodeURIComponent(r.imported[0])}`}>{t('Ver')}</Link>}
+                <button className="btn icon" onClick={() => dismissImportResult(r.id)} title={t('Cerrar')} aria-label={t('Cerrar resultado de {name}', { name: r.file })}>✕</button>
               </li>
             ))}
           </ul>

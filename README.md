@@ -72,21 +72,27 @@ Genera en `.demo/` los reportes y las notas de una tienda online inventada y abr
 
 ## Añadir tus reportes
 
-Hay dos formas de hacerlo. En la pantalla **Importar** de la app tienes una guía con la ruta exacta de cada carpeta.
+Copia tus reportes en `reports/` y, desde la pantalla **Importar**, elige cuáles pasar al dashboard. La propia pantalla tiene una guía con la ruta exacta de cada carpeta.
 
-**1. Zip de artefactos (recomendado si tus tests corren en CI).** Descarga el artefacto del job de Playwright y copia el `.zip`, sin descomprimir, en `reports/`. Aparecerá en **Importar**: selecciónalo y pulsa *Descomprimir y borrar*.
+**1. Zip de artefactos (recomendado si tus tests corren en CI).** Descarga el artefacto del job de Playwright y copia el `.zip`, sin descomprimir, en `reports/`. Al importarlo se descomprime y, si todo va bien, se borra el zip.
 
-- Un zip puede traer uno o varios reportes: cualquier carpeta con el `index.html` de Playwright.
-- Si la carpeta se llama `AAAA-MM-DD_HH-mm-ss_<suite>`, se respeta el nombre. Si no (por ejemplo, la carpeta por defecto `playwright-report/`), se nombra con la hora de inicio que guarda el propio reporte.
-- Si un reporte ya estaba importado, no se duplica.
-- El zip solo se borra si todos sus reportes se han importado correctamente.
+**2. Carpeta ya descomprimida.** Copia la carpeta del reporte (la que tiene `index.html` y `data/`), o una carpeta que contenga varias, también en `reports/`. Al importarla, cada reporte se **mueve** a `reports/playwright-reports/`. La carpeta original solo se borra si queda vacía: si tiene otros ficheros tuyos, se conservan.
 
-**2. Carpeta ya descomprimida.** Copia la carpeta del reporte (con su `index.html` y `data/`) dentro de `reports/playwright-reports/`. Se detecta sola.
+**3. Directamente en `reports/playwright-reports/`.** Si copias ahí la carpeta del reporte, se detecta sola, sin pasar por **Importar**.
+
+En los tres casos:
+- Se aceptan carpetas con cualquier nombre. Si se llama `AAAA-MM-DD_HH-mm-ss_<suite>`, se respeta. Si no (por ejemplo, la carpeta por defecto `playwright-report/`), se nombra con la hora de inicio que guarda el propio reporte.
+- Si un reporte ya estaba importado, no se duplica: al importar se borra el zip o la copia duplicada.
+- Antes de mover o borrar nada se comprueba que el reporte se lee bien.
 
 ```
 reports/
-├── artifacts (12).zip                  ← zips pendientes de importar
-└── playwright-reports/
+├── artifacts (12).zip                  ← zip pendiente de importar
+├── informe-descargado/                 ← carpeta pendiente de importar
+│   └── playwright-report/
+│       ├── index.html
+│       └── data/
+└── playwright-reports/                 ← reportes que ya están en el dashboard
     ├── 2026-09-22_01-03-33_all-tests/  ← un reporte = una ejecución
     │   ├── index.html
     │   └── data/
@@ -146,21 +152,30 @@ Los ficheros `src/config/*.local.js` están en el `.gitignore`: tu configuració
 
 ```js
 // src/config/modules.local.js
-export const MODULES = { cart: 'Carrito', auth: 'Autenticación' }
-export const MODULE_ALIASES = { login: 'auth' }
+export const MODULES = { cart: 'Carrito', auth: 'Autenticación' }   // nombres legibles
+export const MODULE_ALIASES = { login: 'auth' }                     // agrupa identificadores equivalentes
+export const MODULE_RULES = [
+  { tag: '@payments', module: 'payments' },                         // por tag del test
+  { path: /^api\//, module: 'api' },                                // por ruta del spec (regex)
+]
 
 // src/config/notes.local.js
 export const CATEGORY_RULES = [
   ['Guías', { names: ['SETUP', 'RUNNING'] }],   // nombre de fichero sin .md
-  ['Handoffs', { pattern: /^HANDOFF-/i }],             // regex sobre el nombre
-  ['Módulos', { path: /^modules// }],                 // regex sobre la ruta
+  ['Handoffs', { pattern: /^HANDOFF-/i }],      // regex sobre el nombre
+  ['Módulos', { path: /^modules\// }],          // regex sobre la ruta
 ]
 export const KNOWN_ISSUES_NOTE = 'errors/KNOWN.md'
 ```
 
-**Cómo se deduce el módulo de un test:**
-- Si el spec sigue la convención `<prefijo>-<NNN>-<módulo>-…`, se usa ese bloque. Por ejemplo, `crud-009-cart-add-item.spec.ts` → `cart`.
-- Si no, se usa la carpeta del spec: `checkout/cart.spec.ts` → `checkout`.
+**Cómo se decide el módulo de un test** (gana la primera regla que encaje):
+
+1. **Tag explícito**: `test('…', { tag: '@module:cart' }, …)` → `cart`. Es la forma más fiable para cualquier suite.
+2. **Reglas propias** de `MODULE_RULES` en `modules.local.js`, por tag o por ruta del spec.
+3. **Convención de nombre** `<prefijo>-<NNN>-<módulo>-…`: `crud-009-cart-add-item.spec.ts` → `cart`.
+4. **Carpeta del spec**: `checkout/cart.spec.ts` → `checkout` (si está en la raíz, `general`).
+
+Si tus specs están organizados en carpetas por área, no hace falta configurar nada. Si todos están en la misma carpeta, usa tags o reglas.
 
 **% de éxito** = (pasados + flaky) / (total − saltados).
 
@@ -178,13 +193,38 @@ $env:PLAYBOARD_TZ="Europe/Madrid"; npm run dev  # Windows PowerShell
 | `npm run dev` | Arranca la app en http://localhost:5173 |
 | `npm run demo` | Arranca la app con datos de demostración en http://localhost:5174 (`demo:fresh` los regenera) |
 | `npm run ingest` | Procesa los reportes sin arrancar la app |
-| `npm run build` + `npm run preview` | Build de producción servido en local (también expone la API) |
+| `npm run build` + `npm start` | Compila la app y la sirve sin Vite en http://localhost:4174 |
+| `npm run build:exe` | Genera el ejecutable autocontenido (ver abajo) |
 | `npm run lint` | ESLint |
+
+## Ejecutable (sin instalar nada)
+
+Para que otras personas usen playboard-report sin instalar Node.js ni clonar el repositorio:
+
+```bash
+npm run build:exe                        # incluye tu configuración de src/config/*.local.js
+npm run build:exe -- --no-local-config   # ejecutable genérico, para compartir fuera de tu equipo
+```
+
+Se genera la carpeta `release/playboard-report-<sistema>-<arquitectura>/` con:
+
+```
+playboard-report.exe   ← la app completa (~85 MB, incluye Node.js)
+reports/               ← aquí van los zips o carpetas de reportes
+notes/                 ← aquí van las notas .md
+README.txt
+```
+
+Comparte la carpeta entera (o un zip de ella). Al abrir el ejecutable se abre el navegador con la app, y se usan las carpetas `reports/` y `notes/` que tiene al lado; los datos procesados se guardan en `.cache/`, también al lado. Opciones: `--port <n>` y `--no-open`.
+
+- El ejecutable sirve para el sistema en el que se genera: créalo en Windows para Windows, en macOS para macOS y en Linux para Linux. Hace falta Node.js 21.7 o superior para generarlo.
+- Si actualizas el proyecto, vuelve a ejecutar el comando: solo se sustituyen el ejecutable y el `README.txt`, y lo que hay en `reports/`, `notes/` y `.cache/` se conserva. Cierra antes el ejecutable si está abierto. Si ya lo habías copiado a otro sitio, basta con cambiar el `.exe` por el nuevo. Si no cambias nada, el mismo ejecutable sigue sirviendo.
+- Windows puede mostrar un aviso de SmartScreen la primera vez, porque el ejecutable no está firmado («Más información» → «Ejecutar de todas formas»).
 
 ## Cómo funciona
 
 1. `scripts/ingest-reports.mjs` extrae los datos que el `index.html` de Playwright lleva embebidos y los normaliza en `.cache/data/`.
-2. Un plugin de Vite (`plugins/vite-plugin-playboard.js`) sirve esos datos, las notas y las capturas mediante una pequeña API local, y vigila las carpetas para recargar la app sola.
+2. `server/api.mjs` sirve esos datos, las notas y las capturas mediante una pequeña API local, y avisa al navegador de los cambios en `reports/` y `notes/`. Lo usan tanto el plugin de Vite (`npm run dev`) como el servidor del ejecutable (`server/standalone.mjs`).
 3. La interfaz es una SPA de React 19 con React Router y Recharts.
 
 Más detalle en [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).

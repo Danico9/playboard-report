@@ -38,13 +38,14 @@ export function ReportsHelp({ open = false }) {
             <PathBox path={info?.reportsDir} />
           </li>
           <li>
-            It will show up on this screen. Select it and click <b>Extract and delete</b>. The app extracts it,
+            It will show up on this screen. Select it and click <b>Import</b>. The app extracts it,
             checks that the report can be read, deletes the zip and adds it to the dashboard.
           </li>
           <li>
-            Alternatively, copy the already extracted folder (<code>&lt;date&gt;_&lt;suite&gt;/</code> with its <code>index.html</code> and <code>data/</code>) into:
+            Already extracted? Copy the report folder (the one with <code>index.html</code> and <code>data/</code>) into <code>reports/</code> too:
+            it shows up here and, when imported, it is moved to <code>reports/playwright-reports/</code>.
+            Or copy it straight into <code>reports/playwright-reports/</code> and it is picked up automatically:
             <PathBox path={info?.runsDir} />
-            It is picked up automatically, without using this screen.
           </li>
         </ol>
       ) : (
@@ -58,13 +59,14 @@ export function ReportsHelp({ open = false }) {
             <PathBox path={info?.reportsDir} />
           </li>
           <li>
-            Aparecerá en esta pantalla. Selecciónalo y pulsa <b>Descomprimir y borrar</b>. La app lo descomprime,
+            Aparecerá en esta pantalla. Selecciónalo y pulsa <b>Importar</b>. La app lo descomprime,
             comprueba que el reporte se puede leer, borra el zip y lo añade al dashboard.
           </li>
           <li>
-            Otra opción es copiar directamente la carpeta ya descomprimida (<code>&lt;fecha&gt;_&lt;suite&gt;/</code> con su <code>index.html</code> y <code>data/</code>) en:
+            ¿Ya lo tienes descomprimido? Copia la carpeta del reporte (la que tiene <code>index.html</code> y <code>data/</code>) también en <code>reports/</code>:
+            aparecerá aquí y, al importarla, se moverá a <code>reports/playwright-reports/</code>.
+            O cópiala directamente en <code>reports/playwright-reports/</code> y se detectará sola:
             <PathBox path={info?.runsDir} />
-            Se detecta sola, sin pasar por esta pantalla.
           </li>
         </ol>
       )}

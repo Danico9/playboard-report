@@ -5,7 +5,7 @@ import { Empty, ErrorBox, Loading, TestLink } from '../components/ui'
 import { useReport } from '../lib/useReport'
 import { signatureRows } from '../lib/stats'
 import { fmtDate, plural } from '../lib/format'
-import { moduleId, moduleName } from '../config/modules'
+import { moduleName, moduleOfTest } from '../config/modules'
 import { t } from '../i18n'
 
 function RunCounts({ runs, counts }) {
@@ -35,7 +35,7 @@ export default function Errors() {
   const rows = useMemo(() => (summary ? signatureRows(summary, runIndexes) : []), [summary, runIndexes])
   const modules = useMemo(() => {
     const s = new Set()
-    for (const r of rows) for (const k of r.tests.keys()) s.add(moduleId(summary.tests[k].module))
+    for (const r of rows) for (const k of r.tests.keys()) s.add(moduleOfTest(summary.tests[k]))
     return [...s].sort()
   }, [rows, summary])
 
@@ -43,7 +43,7 @@ export default function Errors() {
     const q = query.trim().toLowerCase()
     return rows.filter((r) =>
       (!q || `${r.info.title} ${r.info.location} ${r.info.sample}`.toLowerCase().includes(q)) &&
-      (!mod || [...r.tests.keys()].some((k) => moduleId(summary.tests[k].module) === mod)))
+      (!mod || [...r.tests.keys()].some((k) => moduleOfTest(summary.tests[k]) === mod)))
   }, [rows, query, mod, summary])
 
   if (res.status === 'error' && !summary) return <ErrorBox error={res.error} />

@@ -39,10 +39,13 @@ function invalidate(prefix) {
   for (const [url, entry] of cache) if (url.startsWith(prefix)) load(url, entry.type)
 }
 
-if (import.meta.hot) {
-  import.meta.hot.on('playboard:data', () => refreshData())
-  import.meta.hot.on('playboard:notes', () => invalidate('/api/notes'))
-  import.meta.hot.on('playboard:zips', () => invalidate('/api/zips'))
+// Avisos del servidor cuando cambian reports/ o notes/ (funciona igual con npm run dev y con el ejecutable)
+if (typeof EventSource !== 'undefined') {
+  const events = new EventSource('/api/events')
+  events.addEventListener('playboard:data', () => refreshData())
+  events.addEventListener('playboard:notes', () => invalidate('/api/notes'))
+  events.addEventListener('playboard:zips', () => invalidate('/api/zips'))
+  import.meta.hot?.dispose(() => events.close())
 }
 
 export const useSummary = () => useResource('/api/summary')

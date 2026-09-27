@@ -17,13 +17,16 @@ function runLabel(id, timeZone) {
 
 const fmtSize = (b) => (b > 1e6 ? `${(b / 1e6).toLocaleString(numberLocale(), { maximumFractionDigits: 1 })} MB` : `${Math.round(b / 1e3)} KB`)
 
-// Los errores de lectura de zips vienen del servidor en castellano
+// Los errores de lectura vienen del servidor en castellano
 const UNREADABLE = 'No se puede leer (¿aún se está copiando?):'
-const zipError = (e) => (e.startsWith(UNREADABLE) ? `${t(UNREADABLE)}${e.slice(UNREADABLE.length)}` : t(e))
+const itemError = (e) => (e.startsWith(UNREADABLE) ? `${t(UNREADABLE)}${e.slice(UNREADABLE.length)}` : t(e))
 
-function zipState(z) {
-  if (z.error) return { cls: 'failed', label: 'No válido', selectable: false }
-  if (z.runs.every((r) => r.imported)) return { cls: 'neutral', label: 'Ya importado', selectable: true }
+// Elementos importables: zips y carpetas sueltas de reports/ (se identifican por tipo + nombre)
+const itemKey = (item) => `${item.kind}:${item.name}`
+
+function itemState(item) {
+  if (item.error) return { cls: 'failed', label: 'No válido', selectable: false }
+  if (item.runs.every((r) => r.imported)) return { cls: 'neutral', label: 'Ya importado', selectable: true }
   return { cls: 'info', label: 'Pendiente', selectable: true }
 }
 
@@ -32,39 +35,42 @@ export default function Import() {
   const { data: summary } = useSummary()
   const tz = useInfo().data?.timeZone
   const label = (id) => runLabel(id, tz)
-  // Pendientes primero; dentro de cada grupo, por nombre
-  const zips = useMemo(() => [...(res.data ?? [])].sort((x, y) => (zipState(x).label === 'Pendiente' ? 0 : 1) - (zipState(y).label === 'Pendiente' ? 0 : 1)), [res.data])
+  // Pendientes primero; dentro de cada grupo, primero los zips y después por nombre
+  const items = useMemo(() => [...(res.data ?? [])].sort((x, y) =>
+    (itemState(x).label === 'Pendiente' ? 0 : 1) - (itemState(y).label === 'Pendiente' ? 0 : 1)), [res.data])
   const [selected, setSelected] = useState(() => new Set())
   const [touched, setTouched] = useState(false)
   const [busy, setBusy] = useState(false)
   const [results, setResults] = useState(null)
   const [error, setError] = useState(null)
 
-  const pending = useMemo(() => zips.filter((z) => zipState(z).label === 'Pendiente').map((z) => z.name), [zips])
+  const pending = useMemo(() => items.filter((i) => itemState(i).label === 'Pendiente').map(itemKey), [items])
   // Hasta que el usuario toque la selección, se marcan por defecto los pendientes
-  const sel = touched ? new Set([...selected].filter((n) => zips.some((z) => z.name === n))) : new Set(pending)
+  const sel = touched ? new Set([...selected].filter((k) => items.some((i) => itemKey(i) === k))) : new Set(pending)
 
-  const toggle = (name) => {
+  const toggle = (key) => {
     const next = new Set(sel)
-    if (next.has(name)) next.delete(name)
-    else next.add(name)
+    if (next.has(key)) next.delete(key)
+    else next.add(key)
     setSelected(next)
     setTouched(true)
   }
-  const setAll = (names) => {
-    setSelected(new Set(names))
+  const setAll = (keys) => {
+    setSelected(new Set(keys))
     setTouched(true)
   }
 
   const run = async () => {
-    const files = [...sel]
-    const onlyDelete = files.filter((n) => zipState(zips.find((z) => z.name === n)).label === 'Ya importado')
-    const msg = `${t('Se van a procesar {n} zip(s).', { n: files.length })}\n\n` +
-      `· ${t('Los reportes que falten se descomprimen en reports/playwright-reports/.')}\n` +
-      `· ${t('Cada zip se BORRA después, solo si todos sus reportes se han importado bien.')}` +
-      (onlyDelete.length ? `\n· ${t('{n} ya estaban importados: de esos solo se borra el zip.', { n: onlyDelete.length })}` : '') +
-      `\n\n${t('¿Continuar?')}`
-    if (!window.confirm(msg)) return
+    const chosen = items.filter((i) => sel.has(itemKey(i)))
+    const zips = chosen.filter((i) => i.kind === 'zip')
+    const folders = chosen.filter((i) => i.kind === 'folder')
+    const duplicates = chosen.filter((i) => itemState(i).label === 'Ya importado')
+    const lines = [
+      zips.length && t('· {n} zip(s): los reportes que falten se descomprimen en reports/playwright-reports/ y el zip se BORRA después, solo si todo ha ido bien.', { n: zips.length }),
+      folders.length && t('· {n} carpeta(s): sus reportes se MUEVEN a reports/playwright-reports/. La carpeta solo se borra si queda vacía.', { n: folders.length }),
+      duplicates.length && t('· {n} ya estaban importados: se borra el zip o la copia duplicada del reporte.', { n: duplicates.length }),
+    ].filter(Boolean)
+    if (!window.confirm(`${t('Se van a importar {n} elemento(s).', { n: chosen.length })}\n\n${lines.join('\n')}\n\n${t('¿Continuar?')}`)) return
     setBusy(true)
     setError(null)
     setResults(null)
@@ -72,7 +78,7 @@ export default function Import() {
       const r = await fetch('/api/zips/import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-playboard': '1' },
-        body: JSON.stringify({ files }),
+        body: JSON.stringify({ items: chosen.map(({ kind, name }) => ({ kind, name })) }),
       })
       if (!r.ok) throw new Error(`${r.status} ${await r.text()}`)
       setResults(await r.json())
@@ -87,33 +93,36 @@ export default function Import() {
     }
   }
 
+  const kept = (r) => (r.kind === 'folder' ? t('La carpeta se conserva.') : t('El zip se conserva.'))
+  const removed = (r) => (r.kind === 'folder' ? t('Carpeta vacía eliminada.') : t('Zip eliminado.'))
+
   return (
     <div className="page">
       <div className="page-head">
         <div>
           <h1>{t('Importar reportes')}</h1>
-          <p>{t('Zips de artefactos de Playwright que hay en la carpeta reports/. Elige cuáles descomprimir: al terminar, el zip se borra.')}</p>
+          <p>{t('Zips y carpetas de reportes de Playwright que hay en la carpeta reports/. Elige cuáles importar: los zips se descomprimen y se borran; las carpetas se mueven a reports/playwright-reports/.')}</p>
         </div>
         {summary && <span className="muted small">{t('{n} reportes en el dashboard', { n: summary.runs.length })}</span>}
       </div>
 
-      <ReportsHelp open={!zips.length && !summary?.runs.length} />
+      <ReportsHelp open={!items.length && !summary?.runs.length} />
 
       {results && (
         <div className="card">
           <div className="card-head"><h2>{t('Resultado')}</h2><button className="btn" onClick={() => setResults(null)}>{t('Cerrar')}</button></div>
           <ul className="list">
             {results.map((r) => (
-              <li key={r.file}>
+              <li key={`${r.kind}:${r.file}`}>
                 <span className={`chip ${r.error || r.failed.length ? 'failed' : 'passed'}`}>{r.error || r.failed.length ? `✕ ${t('Error')}` : `✓ ${t('Hecho')}`}</span>
                 <div className="grow">
                   <b>{r.file}</b>
                   <div className="small text-2">
-                    {r.error && <>{t('No se pudo procesar:')} {r.error}. {t('El zip se conserva.')}</>}
+                    {r.error && <>{t('No se pudo procesar:')} {r.error}. {kept(r)}</>}
                     {r.imported.length > 0 && <>{t('Importado:')} {r.imported.map(label).join(', ')}. </>}
                     {r.alreadyImported?.length > 0 && <>{t('Ya estaba importado:')} {r.alreadyImported.map(label).join(', ')}. </>}
                     {r.failed.map((f) => <span key={f.runId}>{label(f.runId)} {t('no es válido')} ({f.error}). </span>)}
-                    {!r.error && (r.deleted ? t('Zip eliminado.') : t('El zip se conserva.'))}
+                    {!r.error && (r.deleted ? removed(r) : r.kind === 'folder' ? t('La carpeta se conserva porque tiene otros ficheros.') : kept(r))}
                   </div>
                 </div>
                 {r.imported[0] && <Link className="btn" to={`/ejecucion/${encodeURIComponent(r.imported[0])}`}>{t('Ver')}</Link>}
@@ -128,42 +137,48 @@ export default function Import() {
         <div className="card-head" style={{ flexWrap: 'wrap', paddingBottom: 12 }}>
           <div className="filters">
             <button className="btn" onClick={() => setAll(pending)} disabled={busy}>{t('Seleccionar pendientes ({n})', { n: pending.length })}</button>
-            <button className="btn" onClick={() => setAll(zips.filter((z) => zipState(z).selectable).map((z) => z.name))} disabled={busy}>{t('Todos')}</button>
+            <button className="btn" onClick={() => setAll(items.filter((i) => itemState(i).selectable).map(itemKey))} disabled={busy}>{t('Todos')}</button>
             <button className="btn" onClick={() => setAll([])} disabled={busy}>{t('Ninguno')}</button>
             <button className="btn" onClick={refreshZips} disabled={busy}>↻ {t('Actualizar')}</button>
           </div>
           <button className="btn primary" onClick={run} disabled={busy || sel.size === 0}>
-            {busy ? t('Procesando… (unos segundos por zip)') : t('Descomprimir y borrar ({n})', { n: sel.size })}
+            {busy ? t('Procesando… (unos segundos por elemento)') : t('Importar ({n})', { n: sel.size })}
           </button>
         </div>
-        {res.status === 'error' && !res.data ? <ErrorBox error={res.error} /> : !res.data ? <Loading what="zips" /> : zips.length === 0 ? (
-          <Empty>{t('No hay zips en reports/. Copia ahí los artifacts (N).zip del CI; aparecerán aquí automáticamente.')}</Empty>
+        {res.status === 'error' && !res.data ? <ErrorBox error={res.error} /> : !res.data ? <Loading what="zips" /> : items.length === 0 ? (
+          <Empty>{t('No hay nada que importar en reports/. Copia ahí los artifacts (N).zip del CI o las carpetas de reportes; aparecerán aquí automáticamente.')}</Empty>
         ) : (
           <div className="table-wrap">
             <table className="table">
               <thead>
-                <tr><th style={{ width: 36 }} /><th>{t('Zip')}</th><th>{t('Estado')}</th><th>{t('Reportes que contiene')}{tz ? ` (${t('hora de {tz}', { tz })})` : ''}</th><th className="num">{t('Tamaño')}</th><th>{t('Añadido')}</th></tr>
+                <tr><th style={{ width: 36 }} /><th>{t('Zip / carpeta')}</th><th>{t('Estado')}</th><th>{t('Reportes que contiene')}{tz ? ` (${t('hora de {tz}', { tz })})` : ''}</th><th className="num">{t('Tamaño')}</th><th>{t('Añadido')}</th></tr>
               </thead>
               <tbody>
-                {zips.map((z) => {
-                  const st = zipState(z)
+                {items.map((item) => {
+                  const st = itemState(item)
+                  const key = itemKey(item)
                   return (
-                    <tr key={z.name} className={st.selectable ? 'clickable' : ''} onClick={() => st.selectable && !busy && toggle(z.name)}>
+                    <tr key={key} className={st.selectable ? 'clickable' : ''} onClick={() => st.selectable && !busy && toggle(key)}>
                       <td>
-                        <input type="checkbox" checked={sel.has(z.name)} disabled={!st.selectable || busy} onChange={() => toggle(z.name)} onClick={(e) => e.stopPropagation()} aria-label={t('Seleccionar {name}', { name: z.name })} />
+                        <input type="checkbox" checked={sel.has(key)} disabled={!st.selectable || busy} onChange={() => toggle(key)} onClick={(e) => e.stopPropagation()} aria-label={t('Seleccionar {name}', { name: item.name })} />
                       </td>
-                      <td className="mono">{z.name}</td>
+                      <td>
+                        <div className="mono">{item.kind === 'folder' ? '📁' : '🗜'} {item.name}{item.kind === 'folder' ? '/' : ''}</div>
+                        <div className="muted small">{item.kind === 'folder' ? t('Carpeta') : t('Zip')}</div>
+                      </td>
                       <td>
                         <span className={`chip ${st.cls}`}>{t(st.label)}</span>
-                        {st.label === 'Ya importado' && <div className="muted small">{t('Al procesarlo solo se borra el zip')}</div>}
+                        {st.label === 'Ya importado' && (
+                          <div className="muted small">{item.kind === 'folder' ? t('Al procesarlo se borra la copia duplicada') : t('Al procesarlo solo se borra el zip')}</div>
+                        )}
                       </td>
                       <td className="small">
-                        {z.error ? <span className="text-2">{zipError(z.error)}</span> : z.runs.map((r) => (
+                        {item.error ? <span className="text-2">{itemError(item.error)}</span> : item.runs.map((r) => (
                           <div key={r.id}>{label(r.id)} {r.imported && <span className="muted">· {t('ya en el dashboard')}</span>}</div>
                         ))}
                       </td>
-                      <td className="num">{fmtSize(z.size)}</td>
-                      <td className="nowrap small">{fmtDate(new Date(z.mtime).toISOString().slice(0, 10))}</td>
+                      <td className="num">{fmtSize(item.size)}</td>
+                      <td className="nowrap small">{fmtDate(new Date(item.mtime).toISOString().slice(0, 10))}</td>
                     </tr>
                   )
                 })}

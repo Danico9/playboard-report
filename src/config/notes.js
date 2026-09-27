@@ -12,8 +12,8 @@
 
 import { t } from '../i18n'
 
-// En la demo (npm run demo) se ignora la configuración local
-const local = import.meta.env.VITE_PLAYBOARD_DEMO === '1' ? {} : Object.values(import.meta.glob('./notes.local.js', { eager: true }))[0] ?? {}
+// Se ignora la configuración local en la demo (npm run demo) y en el ejecutable genérico (build:exe --no-local-config)
+const local = import.meta.env.VITE_PLAYBOARD_DEMO === '1' || import.meta.env.VITE_PLAYBOARD_NO_LOCAL === '1' ? {} : Object.values(import.meta.glob('./notes.local.js', { eager: true }))[0] ?? {}
 
 // Reglas en orden de prioridad; la primera que se cumple asigna la categoría
 export const CATEGORY_RULES = local.CATEGORY_RULES ?? []

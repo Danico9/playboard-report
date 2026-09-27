@@ -6,7 +6,7 @@ import { HistoryStrip, StatusChip, ModuleTag } from './ui'
 import KnownIssues from './KnownIssues'
 import NoteLinks from './NoteLinks'
 import { SKIP_REASON, STATUS } from '../config/status'
-import { moduleId } from '../config/modules'
+import { moduleOfTest } from '../config/modules'
 import { fmtDate, fmtDuration, plural } from '../lib/format'
 import { useKnownIssues, useResource, useSummary, issuesForTest } from '../lib/store'
 import { periodSearch } from '../lib/usePeriod'
@@ -115,7 +115,7 @@ export default function TestDrawer({ run, test, onClose }) {
           <div className="grow stack">
             <div className="row wrap">
               <StatusChip outcome={test.outcome} />
-              <ModuleTag id={moduleId(test.module)} />
+              <ModuleTag id={moduleOfTest(test)} />
               <span className="chip neutral">{test.project}</span>
               {test.retries > 0 && <span className="chip neutral">{plural(test.retries, 'reintento', 'reintentos')}</span>}
             </div>

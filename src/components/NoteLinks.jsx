@@ -1,7 +1,7 @@
 import { Link } from 'react-router'
 import { useNotesIndex } from '../lib/store'
 import { HISTORY_NOTE } from '../config/notes'
-import { moduleId } from '../config/modules'
+import { moduleOfTest } from '../config/modules'
 import { t } from '../i18n'
 
 // Notas relacionadas con un test: su sección en la nota de histórico (HISTORY_NOTE) y el CLAUDE.md de su módulo
@@ -20,7 +20,7 @@ export default function NoteLinks({ meta }) {
       }
     }
   }
-  const mod = moduleId(meta.module)
+  const mod = moduleOfTest(meta)
   const modNote = notes.find((n) => n.path === `pages/${mod}/CLAUDE.md`)
   if (modNote) links.push({ to: `/notas/${modNote.path}`, label: `pages/${mod}/CLAUDE.md` })
   if (!links.length) return null

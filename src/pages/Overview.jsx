@@ -95,7 +95,7 @@ export default function Overview() {
       {toolbar}
       {pending > 0 && (
         <div className="banner">
-          <span>{t('Hay {n} zip(s) de reportes en reports/ sin importar.', { n: pending })}</span>
+          <span>{t('Hay {n} zip(s) o carpetas de reportes en reports/ sin importar.', { n: pending })}</span>
           <Link className="btn primary" to="/importar">{t('Ir a Importar')}</Link>
         </div>
       )}

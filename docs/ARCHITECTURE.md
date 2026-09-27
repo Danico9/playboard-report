@@ -10,7 +10,7 @@ reports/*.zip ──(pantalla Importar)──▶ reports/playwright-reports/<id>
                                                    ▼
                           .cache/data/summary.json + runs/<id>.json (+ caché .raw.json)
                                                    │
-                     plugins/vite-plugin-playboard.js (API local + vigilancia de carpetas)
+       server/api.mjs (API local + avisos)  ◀── plugin de Vite (npm run dev) o server/standalone.mjs (ejecutable)
                                                    │
                                                    ▼
                                     App React (src/) ◀── notes/**/*.md
@@ -38,7 +38,7 @@ Mapeo de estados: `expected` → pasado, `unexpected` → fallido, `flaky` → f
   - `stats`, commit, rama y enlaces al CI;
   - por cada test:
     - **clave estable** `proyecto|fichero|describe › título`, para seguir el mismo test entre ejecuciones;
-    - módulo e identificadores de spec (`crud-009`), deducidos del nombre del fichero;
+    - módulo automático (convención `<prefijo>-<NNN>-<módulo>` o carpeta del spec), tags e identificadores de spec (`crud-009`);
     - intentos con su error, capturas y stdout;
     - motivo de salto: `test.skip()` o no ejecutado.
 - **Firmas de error.** Agrupan errores iguales. Se calculan con la primera línea del mensaje, el `Locator:`, el `Expected:` y la ubicación `at fichero:línea`, sustituyendo los números largos por `#`.
@@ -47,8 +47,14 @@ Mapeo de estados: `expected` → pasado, `unexpected` → fallido, `flaky` → f
   - `runs/<id>.json`: el detalle de una ejecución. Se carga al abrirla.
 - **Incremental.** `manifest.json` guarda el tamaño y la fecha de cada `index.html`. Los que no cambian se reconstruyen desde `runs/<id>.raw.json` (el JSON de Playwright sin `steps`), sin volver a leer el HTML. Si cambia el formato de salida, hay que subir `SCHEMA_VERSION`.
 - **Zips.** `listZips()` lista los reportes que contiene cada zip sin descomprimirlo entero. `importZip()` extrae los reportes que falten, valida cada uno y solo entonces borra el zip.
+- **Carpetas sueltas.** `listFolders()` busca, en cada carpeta de `reports/` (salvo `playwright-reports/`), subcarpetas con `index.html` hasta 4 niveles, sin entrar en `data/` ni `trace/`. `importFolder()` valida cada reporte y lo mueve a `playwright-reports/<id>` con `moveDir()` (reintenta si Windows bloquea la carpeta y, si no puede, copia y borra). Los duplicados se borran y después solo se eliminan las carpetas que han quedado vacías: cualquier otro fichero del usuario se conserva.
+- `GET /api/zips` devuelve zips y carpetas (`kind: 'zip' | 'folder'`), y `POST /api/zips/import` recibe `{ items: [{ kind, name }] }`.
 
-## API local (`plugins/vite-plugin-playboard.js`)
+## Módulos
+
+El módulo que se muestra lo decide el cliente (`moduleOfTest` en `src/config/modules.js`), por este orden: tag `@module:<id>` del test, reglas `MODULE_RULES` de `modules.local.js` (por tag o por ruta), módulo automático de la ingesta y, al final, `general`. Después se aplican los alias (`MODULE_ALIASES`) y los nombres legibles (`MODULES`).
+
+## API local (`server/api.mjs`)
 
 | Ruta | Respuesta |
 |---|---|
@@ -60,9 +66,23 @@ Mapeo de estados: `expected` → pasado, `unexpected` → fallido, `flaky` → f
 | `GET /api/notes` | Índice de notas con sus encabezados |
 | `GET /api/notes/file?path=` | Contenido de una nota |
 | `GET /api/notes/search?q=` | Búsqueda de texto en las notas |
+| `GET /api/events` | Server-Sent Events: `playboard:data`, `playboard:zips`, `playboard:notes` |
 | `GET /reports/**` | Ficheros de los reportes (capturas, `index.html` original…) |
 
-Todas las rutas de ficheros se validan para no salir de su carpeta. El plugin vigila `reports/` y `notes/` y avisa al navegador por el WebSocket de Vite (`playboard:data`, `playboard:zips`, `playboard:notes`), y la app recarga solo lo necesario.
+Todas las rutas de ficheros se validan para no salir de su carpeta. `createApi()` devuelve el middleware y `handleFsEvent()`, que recibe los cambios de ficheros: en desarrollo los da el watcher de Vite (`plugins/vite-plugin-playboard.js`) y en el ejecutable `fs.watch`. Los avisos llegan al navegador por Server-Sent Events (`/api/events`) y la app recarga solo lo necesario.
+
+## Ejecutable (`npm run build:exe`)
+
+`scripts/build-exe.mjs` genera una [Single Executable Application](https://nodejs.org/api/single-executable-applications.html) de Node.js:
+
+1. `vite build` → `dist/`.
+2. `rolldown` empaqueta `server/standalone.mjs` (con la API y la ingesta) en `build/server.cjs`.
+3. `node --experimental-sea-config` crea el blob con el servidor y los ficheros de `dist/` como *assets*.
+4. Copia el binario de Node e inyecta el blob con `postject`. En macOS se quita y se vuelve a poner una firma ad-hoc.
+
+El resultado va a `release/playboard-report-<sistema>-<arquitectura>/`, con `reports/`, `notes/` y un `README.txt`. Al arrancar, `server/standalone.mjs` fija `PLAYBOARD_ROOT` en la carpeta del ejecutable (antes de cargar la ingesta, por eso la importa dinámicamente), sirve la app desde los *assets* incrustados, escucha solo en `127.0.0.1` (puerto 4174 o el siguiente libre) y abre el navegador. `npm start` usa el mismo servidor leyendo `dist/` del proyecto.
+
+Con `--no-local-config` se define `VITE_PLAYBOARD_NO_LOCAL=1` y los `*.local.js` no se incluyen en la compilación.
 
 ## Variables de entorno
 
@@ -70,11 +90,14 @@ Todas las rutas de ficheros se validan para no salir de su carpeta. El plugin vi
 |---|---|
 | `PLAYBOARD_TZ` | Zona horaria para asignar cada ejecución a un día (por defecto, la del sistema) |
 | `PLAYBOARD_DATA_DIR` | Carpeta con `reports/` y `notes/` (por defecto, la raíz del proyecto). La caché va a `.cache/data-<carpeta>` |
+| `PLAYBOARD_ROOT` | Raíz de datos y caché. La fija el ejecutable (su propia carpeta) |
+| `PLAYBOARD_PORT` | Puerto del servidor de `npm start` y del ejecutable (por defecto 4174) |
 | `VITE_PLAYBOARD_DEMO` | La pone `npm run demo`: ignora los `*.local.js` y usa los nombres de módulo de la demo |
+| `VITE_PLAYBOARD_NO_LOCAL` | La pone `build:exe --no-local-config`: compila sin los `*.local.js` |
 
 ## Datos de demostración
 
-`scripts/generate-demo.mjs` crea en `.demo/` unas 40 ejecuciones de una tienda online ficticia con el formato real de Playwright (zip embebido, capturas PNG y error-context), dos zips pendientes de importar y notas de ejemplo. Los datos son deterministas (semilla fija). `scripts/demo.mjs` los genera si faltan y arranca Vite con `PLAYBOARD_DATA_DIR=.demo` en el puerto 5174.
+`scripts/generate-demo.mjs` crea en `.demo/` unas 40 ejecuciones de una tienda online ficticia con el formato real de Playwright (zip embebido, capturas PNG y error-context), dos zips y una carpeta suelta pendientes de importar, un spec clasificado con el tag `@module:catalog` y notas de ejemplo. Los datos son deterministas (semilla fija). `scripts/demo.mjs` los genera si faltan y arranca Vite con `PLAYBOARD_DATA_DIR=.demo` en el puerto 5174.
 
 ## Idiomas (`src/i18n/`)
 

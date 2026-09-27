@@ -1,7 +1,7 @@
 // ─── Cálculos sobre el resumen de ejecuciones ───
 // summary.results[key] = [[runIndex, outcome, durationMs, signatureId, retries], ...]
 
-import { moduleId } from '../config/modules'
+import { moduleOfTest } from '../config/modules'
 import { inRange } from './period'
 
 export const EMPTY_STATS = { total: 0, passed: 0, failed: 0, flaky: 0, skipped: 0 }
@@ -31,7 +31,7 @@ export function testRows(summary, runIndexes) {
     if (!inside.length) continue
     const meta = summary.tests[key]
     const row = {
-      key, meta, module: moduleId(meta.module), n: inside.length,
+      key, meta, module: moduleOfTest(meta), n: inside.length,
       passed: 0, flaky: 0, failed: 0, skipped: 0, retries: 0,
       durSum: 0, durN: 0, maxDur: 0, cells: new Map(), sigs: new Set(),
     }

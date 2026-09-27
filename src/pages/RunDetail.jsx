@@ -3,7 +3,7 @@ import { Link, useLocation, useParams, useSearchParams } from 'react-router'
 import TestDrawer from '../components/TestDrawer'
 import { Empty, ErrorBox, Kpi, Loading, ModuleTag, StatusBar, StatusChip } from '../components/ui'
 import { STATUS, STATUS_ORDER } from '../config/status'
-import { moduleId, moduleName } from '../config/modules'
+import { moduleName, moduleOfTest } from '../config/modules'
 import { fmtDate, fmtDuration, fmtNum, fmtPct, plural } from '../lib/format'
 import { successRate } from '../lib/stats'
 import { useKnownIssues, useRunDetail, useSummary, issuesForTest } from '../lib/store'
@@ -28,7 +28,7 @@ export default function RunDetail() {
   const [sort, setSort] = useState('status')
 
   const detail = res.data
-  const tests = useMemo(() => (detail?.tests ?? []).map((x) => ({ ...x, module: moduleId(x.module) })), [detail])
+  const tests = useMemo(() => (detail?.tests ?? []).map((x) => ({ ...x, module: moduleOfTest(x) })), [detail])
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()

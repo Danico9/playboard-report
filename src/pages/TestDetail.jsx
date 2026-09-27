@@ -5,7 +5,7 @@ import AnsiBlock from '../components/AnsiBlock'
 import KnownIssues from '../components/KnownIssues'
 import NoteLinks from '../components/NoteLinks'
 import { Empty, ErrorBox, HistoryStrip, Kpi, Loading, ModuleTag, StatusChip, StatusLegend } from '../components/ui'
-import { moduleId, moduleName } from '../config/modules'
+import { moduleName, moduleOfTest } from '../config/modules'
 import { fmtDate, fmtDuration, fmtPct, plural } from '../lib/format'
 import { successRate } from '../lib/stats'
 import { issuesForTest, useKnownIssues, useSummary } from '../lib/store'
@@ -61,8 +61,8 @@ export default function TestDetail() {
           <div className="row small muted"><Link to={`/tests${periodSearch(location.search)}`}>← {t('Tests')}</Link></div>
           <div className="row wrap">
             <StatusChip outcome={last.outcome}>{t('Última')}: {fmtDate(last.date, 'd MMM')}</StatusChip>
-            <ModuleTag id={moduleId(meta.module)} />
-            <span className="chip neutral">{moduleName(moduleId(meta.module))}</span>
+            <ModuleTag id={moduleOfTest(meta)} />
+            <span className="chip neutral">{moduleName(moduleOfTest(meta))}</span>
             <span className="chip neutral">{meta.project}</span>
           </div>
           <h1>{[...meta.path, meta.title].join(' › ')}</h1>

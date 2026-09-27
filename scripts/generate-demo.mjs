@@ -80,6 +80,9 @@ const SPECS = [
     tests: [['Correo de confirmación de pedido', 26], ['Correo de envío con seguimiento', 24]] },
   { file: 'chains/flows-007-008-orders-lifecycle.spec.ts', projects: ['chromium-chains'], describe: 'Ciclo de vida del pedido', serial: true, err: () => ERRORS.click('orders/OrderAdmin.ts', 88, 'Marcar como enviado'),
     tests: [['Paso 1: crear pedido', 47], ['Paso 2: preparar pedido en almacén', 33], ['Paso 3: marcar como enviado', 29], ['Paso 4: confirmar entrega', 26], ['Paso 5: facturar', 31]] },
+  // Spec sin la convención de nombre: su módulo sale del tag @module:catalog
+  { file: 'smoke/homepage.spec.ts', projects: ['chromium'], describe: 'Smoke · portada', tags: ['@smoke', '@module:catalog'], err: () => ERRORS.visible('home/HomePage.ts', 19, '[data-testid="hero-banner"]'),
+    tests: [['La portada carga el banner principal', 5], ['Los destacados enlazan a su ficha', 7]] },
 ]
 
 // Comportamientos especiales (por título) para que la demo cuente una historia
@@ -254,7 +257,7 @@ function buildRun(start, runIndex) {
         const base = {
           testId, title, projectName: project,
           location: { file: spec.file.split('/').pop(), line: 10 + summaryTests.length * 12, column: 3 },
-          duration, annotations, tags: [], outcome, path: [spec.describe], ok: outcome !== 'unexpected',
+          duration, annotations, tags: spec.tags ?? [], outcome, path: [spec.describe], ok: outcome !== 'unexpected',
         }
         summaryTests.push({ ...base, results: results.map((r) => ({ attachments: r.attachments.filter((a) => a.path), startTime: r.startTime, workerIndex: r.workerIndex })) })
         detailTests.push({ ...base, results })
@@ -413,9 +416,16 @@ export function generateDemo({ log = console.log } = {}) {
   fs.rmSync(DEMO_DIR, { recursive: true, force: true })
   fs.mkdirSync(RUNS_DIR, { recursive: true })
   const dates = runDates()
-  // Las dos últimas ejecuciones se dejan como zips pendientes, para ver la pantalla «Importar»
+  // Para ver la pantalla «Importar»: la antepenúltima ejecución queda como carpeta suelta en reports/
+  // (con el nombre por defecto de Playwright) y las dos últimas como zips pendientes
   const toZip = dates.slice(-2)
-  dates.slice(0, -2).forEach((d, i) => buildRun(d, i))
+  const loose = dates.at(-3)
+  dates.slice(0, -3).forEach((d, i) => buildRun(d, i))
+  const looseId = buildRun(loose, dates.length - 3)
+  const looseTarget = path.join(DEMO_DIR, 'reports', 'informe-descargado', 'playwright-report')
+  fs.mkdirSync(path.dirname(looseTarget), { recursive: true })
+  fs.cpSync(path.join(RUNS_DIR, looseId), looseTarget, { recursive: true })
+  fs.rmSync(path.join(RUNS_DIR, looseId), { recursive: true, force: true })
   toZip.forEach((d, i) => {
     const id = buildRun(d, dates.length - 2 + i)
     const dir = path.join(RUNS_DIR, id)
@@ -435,7 +445,7 @@ export function generateDemo({ log = console.log } = {}) {
     fs.mkdirSync(path.dirname(p), { recursive: true })
     fs.writeFileSync(p, content)
   }
-  log(`[demo] ${dates.length - 2} reportes + 2 zips pendientes y ${Object.keys(NOTES).length} notas generados en .demo/`)
+  log(`[demo] ${dates.length - 3} reportes, 2 zips y 1 carpeta pendientes de importar y ${Object.keys(NOTES).length} notas generados en .demo/`)
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

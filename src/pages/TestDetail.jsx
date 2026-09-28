@@ -4,10 +4,11 @@ import { TestDurationChart } from '../components/charts'
 import AnsiBlock from '../components/AnsiBlock'
 import KnownIssues from '../components/KnownIssues'
 import NoteLinks from '../components/NoteLinks'
-import { Empty, ErrorBox, HistoryStrip, Kpi, Loading, ModuleTag, StatusChip, StatusLegend } from '../components/ui'
+import { Empty, ErrorBox, HistoryStrip, Kpi, Loading, ModuleTag, Pagination, RemovedChip, StatusChip, StatusLegend } from '../components/ui'
 import { moduleName, moduleOfTest } from '../config/modules'
 import { fmtDate, fmtDuration, fmtPct, plural } from '../lib/format'
-import { successRate } from '../lib/stats'
+import { removedTests, removedTitle, successRate } from '../lib/stats'
+import { paginate, usePagination } from '../lib/usePagination'
 import { issuesForTest, useKnownIssues, useSummary } from '../lib/store'
 import { periodSearch } from '../lib/usePeriod'
 import { t } from '../i18n'
@@ -19,6 +20,7 @@ export default function TestDetail() {
   const res = useSummary()
   const summary = res.data
   const knownIssues = useKnownIssues()
+  const pager = usePagination()
 
   const data = useMemo(() => {
     if (!summary || !summary.results[key]) return null
@@ -44,6 +46,9 @@ export default function TestDetail() {
     }
   }, [summary, key])
 
+  const executions = useMemo(() => (data ? [...data.points].reverse() : []), [data])
+  const page = paginate(executions, pager)
+
   if (res.status === 'error' && !summary) return <ErrorBox error={res.error} />
   if (!summary) return <Loading />
   const meta = summary.tests[key]
@@ -53,6 +58,7 @@ export default function TestDetail() {
   const runLink = (p) => `/ejecucion/${encodeURIComponent(p.run.id)}${periodSearch(location.search, { t: meta.testId })}`
   const first = data.points[0]
   const last = data.points.at(-1)
+  const removed = removedTests(summary).get(key)
 
   return (
     <div className="page">
@@ -61,6 +67,7 @@ export default function TestDetail() {
           <div className="row small muted"><Link to={`/tests${periodSearch(location.search)}`}>← {t('Tests')}</Link></div>
           <div className="row wrap">
             <StatusChip outcome={last.outcome}>{t('Última')}: {fmtDate(last.date, 'd MMM')}</StatusChip>
+            <RemovedChip info={removed} />
             <ModuleTag id={moduleOfTest(meta)} />
             <span className="chip neutral">{moduleName(moduleOfTest(meta))}</span>
             <span className="chip neutral">{meta.project}</span>
@@ -69,6 +76,8 @@ export default function TestDetail() {
           <p className="test-sub">{meta.file}{meta.location ? ` · ${meta.location}` : ''}</p>
         </div>
       </div>
+
+      {removed && <div className="card small text-2">{removedTitle(removed)}</div>}
 
       <KnownIssues issues={issues} />
 
@@ -116,7 +125,7 @@ export default function TestDetail() {
           <table className="table">
             <thead><tr><th>{t('Fecha')}</th><th>{t('Estado')}</th><th className="num">{t('Duración')}</th><th className="num">{t('Reint.')}</th><th>{t('Error')}</th></tr></thead>
             <tbody>
-              {[...data.points].reverse().map((p) => (
+              {page.items.map((p) => (
                 <tr key={p.run.id}>
                   <td className="nowrap"><Link to={runLink(p)}>{fmtDate(p.date, 'EEE d MMM yyyy')} · {p.time}</Link></td>
                   <td><StatusChip outcome={p.outcome} /></td>
@@ -130,6 +139,7 @@ export default function TestDetail() {
             </tbody>
           </table>
         </div>
+        <Pagination pager={pager} info={page} unit="ejecuciones" />
       </div>
 
       <NoteLinks meta={meta} />

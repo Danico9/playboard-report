@@ -244,13 +244,11 @@ export default {
   '(últimas 30)': '(last 30)',
   Proyecto: 'Project',
   'Todos los proyectos': 'All projects',
-  'Mostrar más ({n} restantes)': 'Show more ({n} remaining)',
   'Índice de tests como en el reporte de Playwright: por carpeta, fichero y describe, en el orden del código. El icono es el estado en la última ejecución del periodo; el historial, las últimas 20.': 'Test index like the Playwright report: by folder, file and describe, in source order. The icon is the status in the latest run of the period; the history shows the last 20.',
   'Buscar test, fichero, tag o módulo…': 'Search test, file, tag or module…',
   'Estado en la última ejecución': 'Status in the latest run',
   'Inestables en el periodo': 'Unstable in the period',
   '(raíz)': '(root)',
-  'Mostrar todos': 'Show all',
   'Buscar test, fichero o módulo…': 'Search test, file or module…',
   Organizar: 'Group by',
   Lista: 'List',
@@ -283,7 +281,7 @@ export default {
   'Errores agrupados por tipo (mensaje, locator y línea donde falla). Cada test suma una vez por ejecución en la que falla o es flaky.': 'Errors grouped by type (message, locator and failing line). Each test counts once per run in which it fails or is flaky.',
   'Histórico: todas las ejecuciones ({n}), sin tener en cuenta el periodo.': 'History: all runs ({n}), regardless of the period.',
   '«Nuevo»: no había aparecido nunca antes del periodo.': '“New”: it had never shown up before the period.',
-  '«Ya no aparece»: todos sus tests se han vuelto a ejecutar después y no ha vuelto a salir.': '“No longer seen”: all its tests have run again since and it has not come back.',
+  '«Ya no aparece»: todos sus tests se han vuelto a ejecutar después (o ya no existen) y no ha vuelto a salir.': '“No longer seen”: all its tests have run again since (or no longer exist) and it has not come back.',
   'Del periodo': 'In the period',
   'Histórico': 'History',
   'Todos los estados': 'All states',
@@ -295,7 +293,7 @@ export default {
   '{n} ya no aparecen': '{n} no longer seen',
   'Estado del error': 'Error state',
   'No había aparecido nunca antes de este periodo': 'It had never shown up before this period',
-  'Todos los tests afectados se han vuelto a ejecutar después y no ha vuelto a salir': 'All affected tests have run again since and it has not come back',
+  'Todos los tests afectados se han vuelto a ejecutar después (o ya no existen) y no ha vuelto a salir': 'All affected tests have run again since (or no longer exist) and it has not come back',
   'Ningún error coincide con los filtros.': 'No error matches the filters.',
   'No hay errores.': 'No errors.',
   'Buscar en el error, locator o fichero…': 'Search error, locator or file…',
@@ -408,4 +406,26 @@ export default {
   Pagos: 'Payments',
   Pedidos: 'Orders',
   Notificaciones: 'Notifications',
+
+  // Tests eliminados
+  Eliminado: 'Removed',
+  Eliminados: 'Removed',
+  'Ya no aparece en las últimas {n} ejecuciones de su suite: se ha borrado, renombrado o excluido. Visto por última vez el {date}.':
+    'Not seen in the last {n} runs of its suite: it was deleted, renamed or excluded. Last seen on {date}.',
+  '«Eliminados»: ya no aparecen en las últimas {n} ejecuciones de su suite (se han borrado, renombrado o excluido). Los saltados sí siguen apareciendo en cada ejecución.':
+    '“Removed”: not seen in the last {n} runs of their suite (deleted, renamed or excluded). Skipped tests still show up in every run.',
+  'Tests que ya no aparecen en los reportes (borrados, renombrados o excluidos)': 'Tests no longer seen in the reports (deleted, renamed or excluded)',
+  '{n} eliminados': '{n} removed',
+  'Tests afectados que ya no aparecen en los reportes (borrados, renombrados o excluidos)': 'Affected tests no longer seen in the reports (deleted, renamed or excluded)',
+  'Sus tests ya no existen': 'Its tests no longer exist',
+  '{n} de sus tests ya no existen': '{n} of its tests no longer exist',
+
+  // Paginación
+  Paginación: 'Pagination',
+  '{from}–{to} de {total} {unit}': '{from}–{to} of {total} {unit}',
+  'Página anterior': 'Previous page',
+  'Página siguiente': 'Next page',
+  'Elementos por página': 'Items per page',
+  '{n} por página': '{n} per page',
+  elementos: 'items',
 }

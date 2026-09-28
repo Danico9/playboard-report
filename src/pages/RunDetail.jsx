@@ -1,13 +1,14 @@
 import { Fragment, useMemo, useState } from 'react'
 import { Link, useLocation, useParams, useSearchParams } from 'react-router'
 import TestDrawer from '../components/TestDrawer'
-import { Empty, ErrorBox, Kpi, Loading, ModuleTag, StatusBar, StatusChip } from '../components/ui'
+import { Empty, ErrorBox, Kpi, Loading, ModuleTag, Pagination, StatusBar, StatusChip } from '../components/ui'
 import { STATUS, STATUS_ORDER } from '../config/status'
 import { moduleName, moduleOfTest } from '../config/modules'
 import { fmtDate, fmtDuration, fmtNum, fmtPct, plural } from '../lib/format'
 import { successRate } from '../lib/stats'
 import { useKnownIssues, useRunDetail, useSummary, issuesForTest } from '../lib/store'
 import { periodSearch } from '../lib/usePeriod'
+import { paginate, usePagination } from '../lib/usePagination'
 import { t } from '../i18n'
 import { IssueBadge } from '../components/KnownIssues'
 
@@ -21,11 +22,22 @@ export default function RunDetail() {
   const res = useRunDetail(id)
   const knownIssues = useKnownIssues()
 
-  const [statuses, setStatuses] = useState(() => new Set(['failed']))
-  const [query, setQuery] = useState('')
-  const [mod, setMod] = useState('')
-  const [group, setGroup] = useState('file')
-  const [sort, setSort] = useState('status')
+  const pager = usePagination()
+  // Los filtros de esta pantalla no van en la URL: al cambiar uno se vuelve a la primera página
+  const withReset = (setter) => (value) => {
+    setter(value)
+    pager.setPage(1)
+  }
+  const [statuses, setStatusesRaw] = useState(() => new Set(['failed']))
+  const [query, setQueryRaw] = useState('')
+  const [mod, setModRaw] = useState('')
+  const [group, setGroupRaw] = useState('file')
+  const [sort, setSortRaw] = useState('status')
+  const setStatuses = withReset(setStatusesRaw)
+  const setQuery = withReset(setQueryRaw)
+  const setMod = withReset(setModRaw)
+  const setGroup = withReset(setGroupRaw)
+  const setSort = withReset(setSortRaw)
 
   const detail = res.data
   const tests = useMemo(() => (detail?.tests ?? []).map((x) => ({ ...x, module: moduleOfTest(x) })), [detail])
@@ -67,6 +79,10 @@ export default function RunDetail() {
     }
     return [...map.values()].sort((a, b) => b.failed - a.failed || b.flaky - a.flaky || b.total - a.total)
   }, [tests])
+
+  // La paginación cuenta tests; la cabecera de un grupo se repite al principio de cada página
+  const units = useMemo(() => groups.flatMap(([name, list]) => list.map((x) => ({ name, x, size: list.length }))), [groups])
+  const page = paginate(units, pager)
 
   if (res.status === 'error' && !detail) return <ErrorBox error={res.error} />
   if (!detail) return <Loading what="ejecución" />
@@ -172,41 +188,41 @@ export default function RunDetail() {
                 <tr><th style={{ width: 110 }}>{t('Estado')}</th><th>{t('Test')}</th><th>{t('Módulo')}</th><th>{t('Error')}</th><th className="num">{t('Reint.')}</th><th className="num">{t('Duración')}</th></tr>
               </thead>
               <tbody>
-                {groups.map(([name, list]) => (
-                  <Fragment key={name ?? 'all'}>
-                    {name && (
-                      <tr className="group">
-                        <td colSpan={6}>
-                          <span className={group === 'file' ? 'mono' : ''}>{group === 'module' ? moduleName(name) : name}</span>
-                          <span className="muted small"> · {plural(list.length, 'test', 'tests')}</span>
-                        </td>
-                      </tr>
-                    )}
-                    {list.map((x) => {
-                      const issues = issuesForTest(knownIssues, summary?.tests[x.key])
-                      const sig = x.sig != null ? summary?.signatures[x.sig] : null
-                      return (
-                        <tr key={x.testId} className="clickable" onClick={() => openTest(x)}>
-                          <td><StatusChip outcome={x.outcome} /></td>
-                          <td style={{ maxWidth: 520 }}>
-                            <div className="test-title">{[...x.path, x.title].join(' › ')}</div>
-                            {group !== 'file' && <div className="test-sub truncate">{x.file}</div>}
-                            <IssueBadge issues={issues} />
+                {page.items.map(({ name, x, size }, i) => {
+                  const issues = issuesForTest(knownIssues, summary?.tests[x.key])
+                  const sig = x.sig != null ? summary?.signatures[x.sig] : null
+                  const head = name != null && (i === 0 || page.items[i - 1].name !== name)
+                  return (
+                    <Fragment key={x.testId}>
+                      {head && (
+                        <tr className="group">
+                          <td colSpan={6}>
+                            <span className={group === 'file' ? 'mono' : ''}>{group === 'module' ? moduleName(name) : name}</span>
+                            <span className="muted small"> · {plural(size, 'test', 'tests')}</span>
                           </td>
-                          <td><ModuleTag id={x.module} /></td>
-                          <td className="small text-2" style={{ maxWidth: 420 }}>
-                            {sig ? <div className="truncate" title={sig.title}>{sig.title}</div> : x.outcome === 'skipped' ? <span className="muted">{x.skipReason === 'not-run' ? t('No llegó a ejecutarse') : 'test.skip()'}</span> : null}
-                            {sig?.location && <div className="test-sub truncate">{sig.location}</div>}
-                          </td>
-                          <td className="num">{x.retries || ''}</td>
-                          <td className="num">{fmtDuration(x.duration)}</td>
                         </tr>
-                      )
-                    })}
-                  </Fragment>
-                ))}
+                      )}
+                      <tr className="clickable" onClick={() => openTest(x)}>
+                        <td><StatusChip outcome={x.outcome} /></td>
+                        <td style={{ maxWidth: 520 }}>
+                          <div className="test-title">{[...x.path, x.title].join(' › ')}</div>
+                          {group !== 'file' && <div className="test-sub truncate">{x.file}</div>}
+                          <IssueBadge issues={issues} />
+                        </td>
+                        <td><ModuleTag id={x.module} /></td>
+                        <td className="small text-2" style={{ maxWidth: 420 }}>
+                          {sig ? <div className="truncate" title={sig.title}>{sig.title}</div> : x.outcome === 'skipped' ? <span className="muted">{x.skipReason === 'not-run' ? t('No llegó a ejecutarse') : 'test.skip()'}</span> : null}
+                          {sig?.location && <div className="test-sub truncate">{sig.location}</div>}
+                        </td>
+                        <td className="num">{x.retries || ''}</td>
+                        <td className="num">{fmtDuration(x.duration)}</td>
+                      </tr>
+                    </Fragment>
+                  )
+                })}
               </tbody>
             </table>
+            <Pagination pager={pager} info={page} unit="tests" />
           </div>
         )}
       </div>

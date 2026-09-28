@@ -1,21 +1,24 @@
 import { useLocation, useNavigate } from 'react-router'
 import PeriodToolbar from '../components/PeriodToolbar'
-import { Empty, ErrorBox, Loading, StatusBar } from '../components/ui'
+import { Empty, ErrorBox, Loading, Pagination, StatusBar } from '../components/ui'
 import { useReport } from '../lib/useReport'
 import { successRate } from '../lib/stats'
 import { healthOf } from '../config/status'
 import { fmtDate, fmtDuration, fmtPct } from '../lib/format'
 import { periodSearch } from '../lib/usePeriod'
+import { paginate, usePagination } from '../lib/usePagination'
 import { t } from '../i18n'
 
 export default function Runs() {
   const { res, summary, period, setPeriod, runs } = useReport()
   const navigate = useNavigate()
   const location = useLocation()
+  const pager = usePagination()
   if (res.status === 'error' && !summary) return <ErrorBox error={res.error} />
   if (!summary) return <Loading />
 
   const list = [...runs].reverse()
+  const page = paginate(list, pager)
   return (
     <div className="page">
       <PeriodToolbar period={period} setPeriod={setPeriod} latestDate={summary.runs.at(-1)?.date} runCount={runs.length} />
@@ -35,7 +38,7 @@ export default function Runs() {
                 </tr>
               </thead>
               <tbody>
-                {list.map((r) => {
+                {page.items.map((r) => {
                   const rate = successRate(r.stats)
                   const health = healthOf(rate)
                   return (
@@ -61,6 +64,7 @@ export default function Runs() {
                 })}
               </tbody>
             </table>
+            <Pagination pager={pager} info={page} unit="ejecuciones" />
           </div>
         )}
       </div>

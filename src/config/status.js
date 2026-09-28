@@ -12,6 +12,13 @@ export const STATUS = {
 
 export const STATUS_ORDER = ['passed', 'flaky', 'failed', 'skipped']
 
+// Test eliminado: ya no aparece en el reporte (borrado, renombrado o excluido de la suite).
+// No es un estado de Playwright: un test saltado sí sigue apareciendo, con estado «saltado».
+export const REMOVED = { get label() { return t('Eliminado') }, get plural() { return t('Eliminados') }, icon: '⊘' }
+
+// Ejecuciones seguidas de su suite en las que un test tiene que faltar para darlo por eliminado
+export const REMOVED_AFTER_RUNS = 5
+
 // Colores de las gráficas por tema (los SVG no pueden usar las variables CSS en sus atributos)
 export const CHART_THEMES = {
   dark: { surface: '#1a1a19', grid: '#2c2c2a', axis: '#383835', muted: '#898781', text2: '#c3c2b7', accent: '#3987e5', hover: 'rgba(255,255,255,0.04)' },

@@ -1,13 +1,14 @@
 import { useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 import { DateRangeFilter } from './PeriodToolbar'
-import { Empty, HistoryStrip, ModuleTag, StatusBar, StatusChip } from './ui'
+import { Empty, HistoryStrip, ModuleTag, Pagination, RemovedChip, StatusBar, StatusChip } from './ui'
 import { successRate, testRows } from '../lib/stats'
 import { healthOf } from '../config/status'
 import { moduleName } from '../config/modules'
 import { fmtDuration, fmtPct, plural } from '../lib/format'
 import { periodSearch } from '../lib/usePeriod'
 import { useUrlFilters } from '../lib/useUrlFilters'
+import { paginate, usePagination } from '../lib/usePagination'
 import { useKnownIssues, issuesForTest } from '../lib/store'
 import { t } from '../i18n'
 import { IssueBadge } from './KnownIssues'
@@ -20,6 +21,7 @@ const FILTERS = [
   ['green', 'Siempre OK'],
   ['skipped', 'Con saltados'],
   ['last-failed', 'Fallan en la última'],
+  ['removed', 'Eliminados'],
 ]
 
 // Cómo se organiza la tabla: lista plana o agrupada (por módulo o por fichero spec)
@@ -71,7 +73,7 @@ export default function TestStatsTable({ summary, period, setPeriod, range, runs
   const view = get('view')
   const sort = { key: get('sort'), dir: Number(get('dir')) || -1 }
   const [collapsed, setCollapsed] = useState(() => new Set())
-  const [limit, setLimit] = useState(300)
+  const pager = usePagination()
 
   const rows = useMemo(() => (summary ? testRows(summary, runIndexes) : []), [summary, runIndexes])
   const lastIndex = runs.at(-1)?.index
@@ -86,6 +88,7 @@ export default function TestStatsTable({ summary, period, setPeriod, range, runs
       green: (r) => !r.failed && !r.flaky && r.passed > 0,
       skipped: (r) => r.skipped > 0,
       'last-failed': (r) => r.cells.get(lastIndex) === 'failed',
+      removed: (r) => !!r.removed,
     }[filter] ?? (() => true)
     const out = rows.filter((r) =>
       pass(r) && (!mod || r.module === mod) && (!project || r.meta.project === project) &&
@@ -102,6 +105,11 @@ export default function TestStatsTable({ summary, period, setPeriod, range, runs
   }, [rows, query, filter, mod, project, sort.key, sort.dir, lastIndex])
 
   const groups = useMemo(() => (view === 'list' ? null : groupRows(list, view)), [list, view])
+  // La paginación cuenta tests; un grupo plegado ocupa un solo hueco y su cabecera se repite en cada página
+  const units = useMemo(() => (groups
+    ? groups.flatMap((g) => (collapsed.has(g.key) ? [{ g }] : g.rows.map((r) => ({ g, r }))))
+    : list.map((r) => ({ r }))), [groups, list, collapsed])
+  const page = paginate(units, pager)
   const modules = useMemo(() => [...new Set(rows.map((r) => r.module))].sort(), [rows])
   const projects = useMemo(() => [...new Set(rows.map((r) => r.meta.project))].sort(), [rows])
 
@@ -121,11 +129,12 @@ export default function TestStatsTable({ summary, period, setPeriod, range, runs
   const testRow = (r) => {
     const issues = issuesForTest(knownIssues, r.meta)
     return (
-      <tr key={r.key} className="clickable" onClick={() => navigate(`/test${periodSearch(location.search, { k: r.key })}`)}>
+      <tr key={r.key} className={`clickable${r.removed ? ' removed' : ''}`} onClick={() => navigate(`/test${periodSearch(location.search, { k: r.key })}`)}>
         <td style={{ maxWidth: 480 }} className={groups ? 'indent' : ''}>
           <div className="test-title">{[...r.meta.path, r.meta.title].join(' › ')}</div>
           <div className="test-sub truncate">{view === 'file' ? r.meta.project : `${r.meta.file} · ${r.meta.project}`}</div>
           <IssueBadge issues={issues} />
+          <RemovedChip info={r.removed} />
         </td>
         <td><ModuleTag id={r.module} /></td>
         <td className="num">{r.n}</td>
@@ -211,17 +220,13 @@ export default function TestStatsTable({ summary, period, setPeriod, range, runs
               </tr>
             </thead>
             <tbody>
-              {groups
-                ? groups.flatMap((g) => [groupHead(g), ...(collapsed.has(g.key) ? [] : g.rows.map(testRow))])
-                : list.slice(0, limit).map(testRow)}
+              {page.items.flatMap((u, i) => [
+                ...(u.g && page.items[i - 1]?.g !== u.g ? [groupHead(u.g)] : []),
+                ...(u.r ? [testRow(u.r)] : []),
+              ])}
             </tbody>
           </table>
-          {!groups && list.length > limit && (
-            <div className="empty row" style={{ justifyContent: 'center' }}>
-              <button className="btn" onClick={() => setLimit((l) => l + 300)}>{t('Mostrar más ({n} restantes)', { n: list.length - limit })}</button>
-              <button className="btn" onClick={() => setLimit(Infinity)}>{t('Mostrar todos')}</button>
-            </div>
-          )}
+          <Pagination pager={pager} info={page} unit={collapsed.size && groups ? 'elementos' : 'tests'} />
         </div>
       )}
     </div>

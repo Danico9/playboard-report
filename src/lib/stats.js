@@ -2,7 +2,10 @@
 // summary.results[key] = [[runIndex, outcome, durationMs, signatureId, retries], ...]
 
 import { moduleOfTest } from '../config/modules'
+import { REMOVED_AFTER_RUNS } from '../config/status'
 import { inRange } from './period'
+import { fmtDate } from './format'
+import { t } from '../i18n'
 
 export const EMPTY_STATS = { total: 0, passed: 0, failed: 0, flaky: 0, skipped: 0 }
 
@@ -23,15 +26,47 @@ export function runsInRange(summary, range) {
   return summary.runs.map((r, i) => ({ ...r, index: i })).filter((r) => inRange(r.date, range))
 }
 
+// Tests eliminados (borrados, renombrados o excluidos): no aparecen en las últimas REMOVED_AFTER_RUNS ejecuciones
+// que los habrían incluido, es decir, de una suite en la que sí han aparecido alguna vez y con su proyecto.
+// Así no cuentan las ejecuciones parciales (p. ej. de un solo spec). Un test saltado sí aparece en el reporte
+// (con estado «saltado»), así que nunca se da por eliminado. Se mira todo el histórico, no el periodo.
+// Devuelve Map clave → { lastSeen: índice de su última ejecución, lastDate, missing: ejecuciones en las que falta }
+const removedCache = new WeakMap()
+export function removedTests(summary) {
+  let out = removedCache.get(summary)
+  if (out) return out
+  out = new Map()
+  const runs = summary.runs
+  for (const [key, entries] of Object.entries(summary.results)) {
+    const project = summary.tests[key]?.project
+    const suites = new Set(entries.map(([i]) => runs[i].suite))
+    const lastSeen = entries.at(-1)[0]
+    let missing = 0
+    for (let i = lastSeen + 1; i < runs.length; i++) {
+      const r = runs[i]
+      if (suites.has(r.suite) && (!r.projects?.length || r.projects.includes(project))) missing++
+    }
+    if (missing >= REMOVED_AFTER_RUNS) out.set(key, { lastSeen, lastDate: runs[lastSeen].date, missing })
+  }
+  removedCache.set(summary, out)
+  return out
+}
+
+export function removedTitle(info) {
+  return t('Ya no aparece en las últimas {n} ejecuciones de su suite: se ha borrado, renombrado o excluido. Visto por última vez el {date}.',
+    { n: info.missing, date: fmtDate(info.lastDate) })
+}
+
 export function testRows(summary, runIndexes) {
   const idx = new Set(runIndexes)
+  const removed = removedTests(summary)
   const rows = []
   for (const [key, entries] of Object.entries(summary.results)) {
     const inside = entries.filter((e) => idx.has(e[0]))
     if (!inside.length) continue
     const meta = summary.tests[key]
     const row = {
-      key, meta, module: moduleOfTest(meta), n: inside.length,
+      key, meta, module: moduleOfTest(meta), n: inside.length, removed: removed.get(key) ?? null,
       passed: 0, flaky: 0, failed: 0, skipped: 0, retries: 0,
       durSum: 0, durN: 0, maxDur: 0, cells: new Map(), sigs: new Set(),
     }
@@ -95,8 +130,9 @@ export function signatureRows(summary, runIndexes) {
     }
   }
   // Nuevo: no había aparecido nunca antes del primer día del periodo.
-  // Ya no aparece: todos los tests afectados se han vuelto a ejecutar (sin saltarse) después de su última aparición.
-  // Si alguno no se ha ejecutado desde entonces no hay pruebas de que esté arreglado y sigue activo.
+  // Ya no aparece: todos los tests afectados se han vuelto a ejecutar (sin saltarse) después de su última aparición
+  // o se han eliminado. Si alguno no se ha ejecutado desde entonces no hay pruebas de que esté arreglado y sigue activo.
+  const removed = removedTests(summary)
   const start = Math.min(...runIndexes)
   const firstEver = new Map()
   for (const entries of Object.values(summary.results)) {
@@ -106,7 +142,9 @@ export function signatureRows(summary, runIndexes) {
   }
   for (const row of map.values()) {
     row.isNew = firstEver.get(row.sig) >= start
-    row.gone = [...row.tests.keys()].every((key) =>
+    const keys = [...row.tests.keys()]
+    row.removedTests = keys.filter((key) => removed.has(key)).length
+    row.gone = keys.every((key) => removed.has(key) ||
       summary.results[key].some(([runIndex, outcome]) => runIndex > row.last && idx.has(runIndex) && outcome !== 'skipped'))
   }
   return [...map.values()].sort((a, b) => b.count - a.count)
@@ -117,10 +155,11 @@ export function moduleRows(rows, runIndexes) {
   for (const r of rows) {
     let m = map.get(r.module)
     if (!m) {
-      m = { module: r.module, tests: 0, total: 0, passed: 0, flaky: 0, failed: 0, skipped: 0, perRun: new Map(), worst: [], rows: [] }
+      m = { module: r.module, tests: 0, removed: 0, total: 0, passed: 0, flaky: 0, failed: 0, skipped: 0, perRun: new Map(), worst: [], rows: [] }
       map.set(r.module, m)
     }
     m.tests++
+    if (r.removed) m.removed++
     m.total += r.n
     for (const k of ['passed', 'flaky', 'failed', 'skipped']) m[k] += r[k]
     for (const [runIndex, outcome] of r.cells) {
@@ -130,7 +169,8 @@ export function moduleRows(rows, runIndexes) {
       m.perRun.set(runIndex, pr)
     }
     m.rows.push(r)
-    if (r.failed || r.flaky) m.worst.push(r)
+    // Los eliminados no cuentan entre los más problemáticos: ya no se ejecutan
+    if ((r.failed || r.flaky) && !r.removed) m.worst.push(r)
   }
   const out = [...map.values()]
   for (const m of out) {

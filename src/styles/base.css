@@ -145,6 +145,7 @@ h3 { font-size: 14px; }
 .chip.skipped { background: var(--skipped-soft); color: var(--skipped-text); }
 .chip.neutral { background: var(--surface-2); color: var(--text-2); }
 .chip.info { background: var(--accent-soft); color: var(--info-text); }
+.chip.removed { background: var(--surface-2); color: var(--muted); border: 1px dashed var(--border-strong); }
 .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
 
 .statusbar { display: flex; gap: 2px; height: 8px; border-radius: 4px; overflow: hidden; min-width: 60px; background: var(--surface-2); }
@@ -387,6 +388,8 @@ details.fold[open] > summary { margin-bottom: 8px; }
 .tree-count.failed, .tree-status.failed { color: var(--failed-text); }
 .tree-count.flaky, .tree-status.flaky { color: var(--flaky-text); }
 .tree-count.skipped, .tree-status.skipped { color: var(--skipped-text); }
+.tree-count.removed, .tree-status.removed { color: var(--muted); }
+.tree-test.removed .test-title, tr.removed .test-title { color: var(--text-2); text-decoration: line-through; text-decoration-color: var(--border-strong); }
 .tree-describe { padding: 8px 14px 4px; border-top: 1px solid var(--border); color: var(--text-2); font-size: 12px; font-weight: 600; }
 .tree-test {
   display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; gap: 10px; align-items: center;
@@ -401,3 +404,8 @@ details.fold[open] > summary { margin-bottom: 8px; }
 .tree-test-stats { display: flex; align-items: center; gap: 14px; }
 .chip.tag { font-weight: 500; font-family: var(--mono); }
 @media (max-width: 1100px) { .tree-test-stats .strip { display: none; } }
+
+/* Paginación */
+.pager { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; padding: 12px 14px; border-top: 1px solid var(--border); }
+.pager .btn { min-width: 32px; justify-content: center; }
+.tree-pager .pager { border-top: 0; }

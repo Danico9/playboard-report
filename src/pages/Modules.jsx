@@ -2,7 +2,7 @@ import { Fragment, useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router'
 import PeriodToolbar from '../components/PeriodToolbar'
 import TestStatsTable from '../components/TestStatsTable'
-import { Empty, ErrorBox, Loading, StatusBar, StatusChip, StatusLegend, TestLink } from '../components/ui'
+import { Empty, ErrorBox, Loading, RemovedChip, StatusBar, StatusChip, StatusLegend, TestLink } from '../components/ui'
 import { useReport } from '../lib/useReport'
 import { moduleRows, successRate, testRows } from '../lib/stats'
 import { HEALTH_LABEL, STATUS, healthOf } from '../config/status'
@@ -50,8 +50,8 @@ function ModuleTests({ m, colSpan }) {
         <table className="table compact">
           <tbody>
             {m.rows.map((r) => (
-              <tr key={r.key}>
-                <td style={{ minWidth: 0 }}><TestLink testKey={r.key} meta={r.meta} /></td>
+              <tr key={r.key} className={r.removed ? 'removed' : ''}>
+                <td style={{ minWidth: 0 }}><TestLink testKey={r.key} meta={r.meta} /><RemovedChip info={r.removed} /></td>
                 <td className="num">{r.rate == null ? '—' : <span className={`chip ${healthOf(r.rate)}`}>{fmtPct(r.rate, 0)}</span>}</td>
                 <td className="num small">{r.failed} ✕ · {r.flaky} ↻ · {r.skipped} ⤼</td>
                 <td><StatusChip outcome={r.last} /></td>
@@ -128,7 +128,10 @@ export default function Modules() {
                         </button>
                         <div className="test-sub" style={{ paddingLeft: 18 }}>{m.module}</div>
                       </td>
-                      <td className="num">{m.tests}</td>
+                      <td className="num">
+                        {m.tests}
+                        {m.removed > 0 && <div className="muted small nowrap" title={t('Tests que ya no aparecen en los reportes (borrados, renombrados o excluidos)')}>{t('{n} eliminados', { n: m.removed })}</div>}
+                      </td>
                       <td className="num"><span className={`chip ${healthOf(m.rate)}`}>{fmtPct(m.rate)}</span></td>
                       <td><StatusBar stats={m} /></td>
                       <td className="num">{m.failed ? <b>{m.failed}</b> : <span className="muted">0</span>}</td>

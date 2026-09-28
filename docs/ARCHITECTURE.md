@@ -120,11 +120,16 @@ Configuración local (`src/config/*.local.js`):
 - `lib/usePeriod.js` y `lib/period.js`: el periodo (`?p=week&d=2026-09-22`, `?p=range&from=…&to=…`) vive en la URL.
   Los filtros de cada pantalla también, junto al periodo, con `lib/useUrlFilters.js`: el índice de Tests (`?q=…&s=failed&mod=…&proj=…`)
   y la pestaña «Tests por módulo» de Módulos (`?tab=tests&f=…&view=module|file|list&sort=…`). `DateRangeFilter` (en `PeriodToolbar.jsx`) cambia el periodo a «Rango».
+- `lib/usePagination.js`: paginación de listas largas. La página va en la URL como `?pg=` (`p` es el tipo de periodo) y se quita al cambiar un filtro
+  (`useUrlFilters`) o el periodo; el tamaño de página se guarda en `localStorage` (`playboard-page-size`). `paginate()` corta la lista y `<Pagination>` (en `components/ui.jsx`) pinta los controles.
+  En las listas agrupadas (árbol de Tests, tablas por módulo o fichero, detalle de ejecución) se paginan los tests y la cabecera del grupo se repite al principio de cada página; un grupo plegado ocupa un solo hueco.
 - `pages/Tests.jsx`: índice tipo reporte de Playwright (carpeta → fichero → `describe` → test). Los tests se ordenan por la línea de `location`.
 - `components/TestStatsTable.jsx`: tabla de estadísticas por test, agrupable por módulo o fichero; la usa la pestaña «Tests por módulo» de `pages/Modules.jsx`.
 - `lib/importResults.js`: resultados de «Importar» fuera del componente (y en `sessionStorage`), para que sigan a la vista al cambiar de pantalla hasta que se cierren.
 - `lib/coverage.js`: `parseCoverage()` saca la cobertura por ámbito de la nota `COVERAGE_NOTE`: los números del encabezado `##` o, si no los tiene, las filas de tabla y los elementos de lista con estado de ese apartado. Recibe los encabezados de `/api/notes` para usar los mismos slugs en los enlaces.
-- `lib/stats.js`: cálculos puros (estadísticas por test, módulo y firma de error, y comparación entre ejecuciones). `signatureRows()` marca cada firma como `isNew` (su primera aparición en todo el histórico cae dentro de las ejecuciones pedidas) y `gone` (todos sus tests se han vuelto a ejecutar, sin saltarse, después de su última aparición).
+- `lib/stats.js`: cálculos puros (estadísticas por test, módulo y firma de error, y comparación entre ejecuciones). `signatureRows()` marca cada firma como `isNew` (su primera aparición en todo el histórico cae dentro de las ejecuciones pedidas) y `gone` (todos sus tests se han vuelto a ejecutar, sin saltarse, después de su última aparición, o se han eliminado).
+  `removedTests()` da los tests eliminados: los que faltan en las últimas `REMOVED_AFTER_RUNS` ejecuciones (`config/status.js`) de una suite en la que sí han aparecido y con su proyecto, mirando todo el histórico.
+  Un test saltado sigue apareciendo en el reporte, así que nunca se da por eliminado. `testRows()` lo añade a cada fila como `removed` (`{ lastSeen, lastDate, missing }` o `null`).
 - `config/`: estados y colores, módulos y notas. Cada usuario los adapta con `*.local.js` (en el `.gitignore`), que se cargan con `import.meta.glob` si existen.
 - `lib/theme.js`: tema oscuro (por defecto) o claro, en `<html data-theme>`. Los tokens de cada tema están en `styles/tokens.css`, y los colores de las gráficas SVG en `config/status.js` (`CHART_THEMES`).
 - `pages/`: una pantalla por ruta. `components/`: piezas reutilizables (gráficas, panel de test, visor Markdown…).

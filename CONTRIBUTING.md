@@ -42,6 +42,7 @@ npm run demo
 - La API vive solo en `server/api.mjs` (la usan `npm run dev` y el ejecutable). Si la cambias, prueba también el ejecutable con `npm run build:exe`.
 - `server/` y `scripts/ingest-reports.mjs` se empaquetan en CommonJS para el ejecutable: nada de `import.meta` fuera de ramas que solo corran sin `PLAYBOARD_ROOT`, ni top-level `await` en `server/`.
 - Toda ruta de fichero que llegue a la API se valida para no salir de su carpeta. Las acciones que modifican datos van por `POST` con la cabecera `x-playboard: 1`.
+- Las listas que crecen con el histórico se paginan con `usePagination()`/`paginate()` (`src/lib/usePagination.js`) y `<Pagination>` (`src/components/ui.jsx`).
 - Nada específico de una suite o una empresa (módulos, categorías de notas, URLs, tickets) en los ficheros versionados: cada usuario lo pone en `src/config/*.local.js`, que está en el `.gitignore`.
 
 ### Demo y capturas

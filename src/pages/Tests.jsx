@@ -1,15 +1,16 @@
 import { useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 import PeriodToolbar, { DateRangeFilter } from '../components/PeriodToolbar'
-import { Empty, ErrorBox, HistoryStrip, Loading, ModuleTag, StatusBar } from '../components/ui'
+import { Empty, ErrorBox, HistoryStrip, Loading, ModuleTag, Pagination, RemovedChip, StatusBar } from '../components/ui'
 import { IssueBadge } from '../components/KnownIssues'
 import { useReport } from '../lib/useReport'
-import { testRows } from '../lib/stats'
-import { STATUS, healthOf } from '../config/status'
+import { removedTitle, testRows } from '../lib/stats'
+import { REMOVED, REMOVED_AFTER_RUNS, STATUS, healthOf } from '../config/status'
 import { moduleName } from '../config/modules'
 import { fmtDuration, fmtPct, plural } from '../lib/format'
 import { periodSearch } from '../lib/usePeriod'
 import { useUrlFilters } from '../lib/useUrlFilters'
+import { paginate, usePagination } from '../lib/usePagination'
 import { useKnownIssues, issuesForTest } from '../lib/store'
 import { t } from '../i18n'
 
@@ -18,23 +19,28 @@ import { t } from '../i18n'
 // pero con los datos de todo el periodo (estado en la última ejecución, % de éxito, fallos, flaky e historial).
 
 // Estado que se usa para filtrar: el de la última ejecución del periodo en la que se ejecutó el test.
-// «Inestables» son los que han fallado o han sido flaky alguna vez en el periodo.
+// Los eliminados (ya no aparecen en los reportes) van aparte y no cuentan en los demás estados.
+// «Inestables» son los que siguen existiendo y han fallado o han sido flaky alguna vez en el periodo.
 const STATUS_FILTERS = [
   ['all', 'Todos'],
   ['passed', null],
   ['failed', null],
   ['flaky', null],
   ['skipped', null],
+  ['removed', null],
   ['unstable', 'Inestables en el periodo'],
 ]
+const current = (outcome) => (r) => !r.removed && r.last === outcome
 const statusMatch = {
   all: () => true,
-  passed: (r) => r.last === 'passed',
-  failed: (r) => r.last === 'failed',
-  flaky: (r) => r.last === 'flaky',
-  skipped: (r) => r.last === 'skipped',
-  unstable: (r) => r.failed > 0 || r.flaky > 0,
+  passed: current('passed'),
+  failed: current('failed'),
+  flaky: current('flaky'),
+  skipped: current('skipped'),
+  removed: (r) => !!r.removed,
+  unstable: (r) => !r.removed && (r.failed > 0 || r.flaky > 0),
 }
+const LABELS = { ...STATUS, removed: REMOVED }
 
 const DEFAULTS = { q: '', s: 'all', mod: '', proj: '' }
 const HISTORY_RUNS = 20
@@ -49,9 +55,48 @@ const folderOf = (file) => (file.includes('/') ? file.slice(0, file.lastIndexOf(
 const baseName = (file) => file.slice(file.lastIndexOf('/') + 1)
 
 function countStats(rows) {
-  const s = { total: rows.length, passed: 0, failed: 0, flaky: 0, skipped: 0 }
-  for (const r of rows) if (s[r.last] != null) s[r.last]++
+  const s = { total: rows.length, passed: 0, failed: 0, flaky: 0, skipped: 0, removed: 0 }
+  for (const r of rows) {
+    const k = r.removed ? 'removed' : r.last
+    if (s[k] != null) s[k]++
+  }
   return s
+}
+
+// La paginación cuenta tests: una carpeta o un fichero plegados ocupan un solo hueco.
+// Después se vuelve a agrupar lo que toca en la página para pintar sus cabeceras.
+function treeUnits(tree, collapsed) {
+  const units = []
+  for (const folder of tree) {
+    if (collapsed.has(folder.key)) {
+      units.push({ folder })
+      continue
+    }
+    for (const file of folder.files) {
+      if (collapsed.has(file.key)) units.push({ folder, file })
+      else for (const test of file.tests) units.push({ folder, file, test })
+    }
+  }
+  return units
+}
+
+function regroup(units) {
+  const out = []
+  for (const u of units) {
+    let fo = out.at(-1)
+    if (fo?.folder !== u.folder) {
+      fo = { folder: u.folder, files: [] }
+      out.push(fo)
+    }
+    if (!u.file) continue
+    let fi = fo.files.at(-1)
+    if (fi?.file !== u.file) {
+      fi = { file: u.file, tests: [] }
+      fo.files.push(fi)
+    }
+    if (u.test) fi.tests.push(u.test)
+  }
+  return out
 }
 
 // Árbol carpeta → fichero → tests ordenados por su posición en el código
@@ -86,8 +131,8 @@ function buildTree(rows) {
 function Counts({ stats }) {
   return (
     <span className="tree-counts">
-      {['failed', 'flaky', 'skipped', 'passed'].map((k) => stats[k] > 0 && (
-        <span key={k} className={`tree-count ${k}`} title={STATUS[k].plural}><span aria-hidden>{STATUS[k].icon}</span> {stats[k]}</span>
+      {['failed', 'flaky', 'skipped', 'passed', 'removed'].map((k) => stats[k] > 0 && (
+        <span key={k} className={`tree-count ${k}`} title={LABELS[k].plural}><span aria-hidden>{LABELS[k].icon}</span> {stats[k]}</span>
       ))}
     </span>
   )
@@ -108,6 +153,7 @@ export default function Tests() {
   const mod = get('mod')
   const project = get('proj')
   const [collapsed, setCollapsed] = useState(() => new Set())
+  const pager = usePagination()
 
   const rows = useMemo(() => (summary ? testRows(summary, runIndexes) : []), [summary, runIndexes])
   const modules = useMemo(() => [...new Set(rows.map((r) => r.module))].sort(), [rows])
@@ -121,6 +167,9 @@ export default function Tests() {
   }, [rows, query, mod, project])
   const counts = useMemo(() => ({ ...countStats(scoped), unstable: scoped.filter(statusMatch.unstable).length }), [scoped])
   const tree = useMemo(() => buildTree(scoped.filter(statusMatch[status])), [scoped, status])
+  const units = useMemo(() => treeUnits(tree, collapsed), [tree, collapsed])
+  const page = paginate(units, pager)
+  const pageTree = regroup(page.items)
 
   if (res.status === 'error' && !summary) return <ErrorBox error={res.error} />
   if (!summary) return <Loading />
@@ -140,23 +189,24 @@ export default function Tests() {
   const testRow = (r) => {
     const issues = issuesForTest(knownIssues, r.meta)
     const [, line] = splitLocation(r.meta.location)
-    const st = STATUS[r.last]
+    const st = r.removed ? REMOVED : STATUS[r.last]
     return (
       <div
         key={r.key}
-        className="tree-test"
+        className={`tree-test${r.removed ? ' removed' : ''}`}
         role="link"
         tabIndex={0}
         style={{ paddingLeft: 18 + r.meta.path.length * 18 }}
         onClick={() => navigate(`/test${periodSearch(location.search, { k: r.key })}`)}
         onKeyDown={(e) => e.key === 'Enter' && navigate(`/test${periodSearch(location.search, { k: r.key })}`)}
       >
-        <span className={`tree-status ${r.last}`} title={`${t('Última')}: ${st?.label}`}>{st?.icon}</span>
+        <span className={`tree-status ${r.removed ? 'removed' : r.last}`} title={r.removed ? removedTitle(r.removed) : `${t('Última')}: ${st?.label}`}>{st?.icon}</span>
         <div className="tree-test-main">
           <div className="row wrap" style={{ gap: 6 }}>
             <span className="test-title">{r.meta.title}</span>
             {(r.meta.tags ?? []).map((tag) => <span key={tag} className="chip neutral tag">{tag}</span>)}
             <IssueBadge issues={issues} />
+            <RemovedChip info={r.removed} />
           </div>
           <div className="test-sub">
             {line ? `${baseName(splitLocation(r.meta.location)[0])}:${line} · ` : ''}{r.meta.project}
@@ -175,10 +225,10 @@ export default function Tests() {
   }
 
   // Tests de un fichero con las cabeceras de sus describe (se repiten solo cuando cambia el bloque)
-  const fileBody = (f) => {
+  const fileBody = (tests) => {
     const out = []
     let prev = []
-    for (const r of f.tests) {
+    for (const r of tests) {
       const p = r.meta.path
       let d = 0
       while (d < p.length && d < prev.length && p[d] === prev[d]) d++
@@ -197,7 +247,11 @@ export default function Tests() {
       <div className="page-head">
         <div>
           <h1>{t('Tests')}</h1>
-          <p>{t('Índice de tests como en el reporte de Playwright: por carpeta, fichero y describe, en el orden del código. El icono es el estado en la última ejecución del periodo; el historial, las últimas 20.')}</p>
+          <p>
+            {t('Índice de tests como en el reporte de Playwright: por carpeta, fichero y describe, en el orden del código. El icono es el estado en la última ejecución del periodo; el historial, las últimas 20.')}
+            {' '}
+            {t('«Eliminados»: ya no aparecen en las últimas {n} ejecuciones de su suite (se han borrado, renombrado o excluido). Los saltados sí siguen apareciendo en cada ejecución.', { n: REMOVED_AFTER_RUNS })}
+          </p>
         </div>
       </div>
 
@@ -218,7 +272,7 @@ export default function Tests() {
           <div className="seg" role="group" aria-label={t('Estado en la última ejecución')}>
             {STATUS_FILTERS.map(([k, label]) => (
               <button key={k} className={status === k ? 'on' : ''} onClick={() => set({ s: k })}>
-                {STATUS[k] ? <><span className={`tree-status inline ${k}`} aria-hidden>{STATUS[k].icon}</span> {STATUS[k].plural}</> : t(label)}
+                {LABELS[k] ? <><span className={`tree-status inline ${k}`} aria-hidden>{LABELS[k].icon}</span> {LABELS[k].plural}</> : t(label)}
                 <span className="seg-count">{k === 'all' ? counts.total : counts[k]}</span>
               </button>
             ))}
@@ -231,7 +285,7 @@ export default function Tests() {
         </div>
       </div>
 
-      {tree.length === 0 ? <Empty>{t('Ningún test coincide con los filtros.')}</Empty> : tree.map((folder) => {
+      {tree.length === 0 ? <Empty>{t('Ningún test coincide con los filtros.')}</Empty> : <div className="stack" style={{ gap: 'var(--gap)' }} data-pager-top>{pageTree.map(({ folder, files }) => {
         const folderOpen = !collapsed.has(folder.key)
         return (
           <section key={folder.key} className="tree-folder">
@@ -241,7 +295,7 @@ export default function Tests() {
               <span className="muted small">{plural(folder.files.length, 'fichero', 'ficheros')} · {plural(folder.stats.total, 'test', 'tests')}</span>
               <Counts stats={folder.stats} />
             </button>
-            {folderOpen && folder.files.map((f) => {
+            {folderOpen && files.map(({ file: f, tests }) => {
               const open = !collapsed.has(f.key)
               return (
                 <div key={f.key} className="tree-file">
@@ -253,13 +307,15 @@ export default function Tests() {
                     <Counts stats={f.stats} />
                     <span style={{ width: 90 }}><StatusBar stats={f.stats} /></span>
                   </button>
-                  {open && <div className="tree-file-body">{fileBody(f)}</div>}
+                  {open && <div className="tree-file-body">{fileBody(tests)}</div>}
                 </div>
               )
             })}
           </section>
         )
       })}
+      <div className="tree-pager"><Pagination pager={pager} info={page} unit={collapsed.size ? 'elementos' : 'tests'} /></div>
+      </div>}
     </div>
   )
 }

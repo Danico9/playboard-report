@@ -1,8 +1,11 @@
+import { useRef } from 'react'
 import { Link, useLocation } from 'react-router'
-import { STATUS, STATUS_ORDER } from '../config/status'
+import { REMOVED, STATUS, STATUS_ORDER } from '../config/status'
 import { moduleName } from '../config/modules'
-import { fmtDate } from '../lib/format'
+import { fmtDate, fmtNum } from '../lib/format'
 import { periodSearch } from '../lib/usePeriod'
+import { removedTitle } from '../lib/stats'
+import { PAGE_SIZES } from '../lib/usePagination'
 import { t } from '../i18n'
 
 export function StatusChip({ outcome, children }) {
@@ -104,5 +107,55 @@ export function TestLink({ testKey, meta, sub = true }) {
       </Link>
       {sub && <span className="test-sub truncate" title={meta.file}>{meta.file} · {meta.project}</span>}
     </div>
+  )
+}
+
+// Test que ya no aparece en los reportes (ver removedTests en lib/stats.js)
+export function RemovedChip({ info }) {
+  if (!info) return null
+  return <span className="chip removed" title={removedTitle(info)}><span aria-hidden>{REMOVED.icon}</span>{REMOVED.label}</span>
+}
+
+// Números de página que se enseñan: la primera, la última y las cercanas a la actual («…» en los huecos)
+function pageNumbers(page, pageCount) {
+  const out = []
+  for (let n = 1; n <= pageCount; n++) {
+    if (n === 1 || n === pageCount || Math.abs(n - page) <= 2) out.push(n)
+    else if (out.at(-1) !== '…') out.push('…')
+  }
+  return out
+}
+
+// Controles de paginación. `pager` es lo que devuelve usePagination(); `info`, lo que devuelve paginate().
+// Al cambiar de página se sube al principio de la lista (el elemento con data-pager-top o la tarjeta que la contiene).
+export function Pagination({ pager, info, unit = 'tests' }) {
+  const ref = useRef(null)
+  if (info.total <= PAGE_SIZES[0]) return null
+  const go = (n) => {
+    pager.setPage(n)
+    const el = ref.current
+    const top = el?.closest('[data-pager-top]') ?? el?.closest('.card') ?? el?.closest('.page')
+    top?.scrollIntoView({ block: 'start', behavior: 'smooth' })
+  }
+  return (
+    <nav ref={ref} className="pager" aria-label={t('Paginación')}>
+      <span className="muted small">{t('{from}–{to} de {total} {unit}', { from: fmtNum(info.from + 1), to: fmtNum(info.to), total: fmtNum(info.total), unit: t(unit) })}</span>
+      {info.pageCount > 1 && (
+        <div className="row" style={{ gap: 4 }}>
+          <button className="btn" disabled={info.page <= 1} onClick={() => go(info.page - 1)} aria-label={t('Página anterior')}>‹</button>
+          {pageNumbers(info.page, info.pageCount).map((n, i) => (n === '…'
+            ? <span key={`gap${i}`} className="muted small">…</span>
+            : (
+              <button key={n} className={`btn${n === info.page ? ' primary' : ''}`} aria-current={n === info.page ? 'page' : undefined} onClick={() => go(n)}>
+                {n}
+              </button>
+            )))}
+          <button className="btn" disabled={info.page >= info.pageCount} onClick={() => go(info.page + 1)} aria-label={t('Página siguiente')}>›</button>
+        </div>
+      )}
+      <select className="select" value={pager.size} onChange={(e) => pager.setSize(Number(e.target.value))} aria-label={t('Elementos por página')}>
+        {PAGE_SIZES.map((n) => <option key={n} value={n}>{t('{n} por página', { n })}</option>)}
+      </select>
+    </nav>
   )
 }

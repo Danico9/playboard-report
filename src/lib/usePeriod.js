@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from 'react'
 import { useSearchParams } from 'react-router'
 import { periodRange, previousRange } from './period'
+import { PAGE_PARAM } from './usePagination'
 
 const PERIOD_KEYS = ['p', 'd', 'from', 'to']
 
@@ -18,6 +19,7 @@ export function usePeriod(latestDate) {
     setParams((prev) => {
       const out = new URLSearchParams(prev)
       for (const k of PERIOD_KEYS) out.delete(k)
+      out.delete(PAGE_PARAM)
       if (next.type !== 'all') out.set('p', next.type)
       if (next.anchor && next.type !== 'all' && next.type !== 'range') out.set('d', next.anchor)
       if (next.type === 'range') {

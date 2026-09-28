@@ -41,15 +41,19 @@ El reporte HTML de Playwright es muy completo, pero solo muestra una ejecución.
   - los reintentos y su historial en todas las ejecuciones.
 - **Tests:** índice de todos los tests como en el reporte de Playwright (carpeta → fichero → `describe` → test, en el orden del código), pero con los datos de todo el periodo.
   - Cada test muestra su estado en la última ejecución, su % de éxito, fallos, flaky, duración media y una fila de cuadrados de colores, uno por ejecución.
-  - Filtros por estado con contadores (como en Playwright) y «Inestables en el periodo», buscador (test, fichero, tag o módulo), módulo, proyecto y rango de fechas con atajos (últimos 7, 30 o 90 días).
+  - Filtros por estado con contadores (como en Playwright), «Eliminados» e «Inestables en el periodo», buscador (test, fichero, tag o módulo), módulo, proyecto y rango de fechas con atajos (últimos 7, 30 o 90 días).
   - Carpetas y ficheros se pliegan y despliegan. Los filtros van en la URL: se conservan al abrir un test y volver atrás.
+  - **Tests eliminados:** un test que no aparece en las últimas 5 ejecuciones de su suite se marca como **Eliminado** (se ha borrado, renombrado o excluido).
+    No se confunde con un test saltado: los saltados siguen apareciendo en cada reporte. Las ejecuciones parciales (de otra suite, p. ej. de un solo spec) no cuentan.
+    Se marcan en Tests, Módulos, Errores y la ficha del test, y el número de ejecuciones se cambia en `REMOVED_AFTER_RUNS` (`src/config/status.js`).
 - **Errores:** agrupados por tipo (mensaje, locator y línea donde falla), con los tests afectados y su evolución. Cada test suma una vez por ejecución en la que falla o es flaky. Dos pestañas:
   - **Del periodo:** los errores del periodo elegido. Se marcan como **Nuevo** los que no habían salido nunca antes del periodo.
   - **Histórico:** todos los errores de todas las ejecuciones, sin tener en cuenta el periodo.
-  - En ambas se marcan como **Ya no aparece** los errores cuyos tests afectados se han vuelto a ejecutar después y no lo han repetido. Si alguno no se ha ejecutado desde entonces, el error sigue contando como activo. Se puede filtrar por estado (nuevos, siguen apareciendo, ya no aparecen).
+  - En ambas se marcan como **Ya no aparece** los errores cuyos tests afectados se han vuelto a ejecutar después (o se han eliminado) y no lo han repetido. Si alguno no se ha ejecutado desde entonces, el error sigue contando como activo. Se puede filtrar por estado (nuevos, siguen apareciendo, ya no aparecen).
 - **Módulos:** dos pestañas.
   - **Resumen:** % de éxito por área funcional y sus tests más problemáticos. Al pulsar un módulo se despliegan todos sus tests.
   - **Tests por módulo:** tabla de estadísticas de cada test, agrupada por módulo o por fichero (o en lista), ordenable por columnas.
+- **Listas paginadas:** Tests, «Tests por módulo», Errores, Ejecuciones, el detalle de una ejecución y el historial de un test se muestran por páginas (50, 100, 250 o 500 elementos; el tamaño se recuerda en el navegador).
 - **Importar:** eliges qué zips de artefactos del CI descomprimir. La app comprueba que cada reporte se lee bien y después borra el zip. El resultado se queda a la vista (aunque cambies de pantalla) hasta que lo cierras, uno a uno o todos a la vez.
 - **Notas:** visor Markdown (tablas, código resaltado, índice lateral y buscador) que se actualiza al editar los ficheros.
 - **Modo oscuro y claro:** oscuro por defecto; se cambia con el botón del menú lateral y se recuerda en el navegador.

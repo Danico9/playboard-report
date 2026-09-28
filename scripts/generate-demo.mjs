@@ -59,7 +59,7 @@ const SPECS = [
   { file: 'crud/crud-006-cart-coupons.spec.ts', projects: ['chromium'], describe: 'Cupones', err: () => ERRORS.text('cart/CouponBox.ts', 41, 'coupon-message', 'Cupón aplicado', 'Cupón no válido'),
     tests: [['Aplicar cupón de porcentaje', 10], ['Aplicar cupón de importe fijo', 10], ['Cupón caducado', 6], ['Solo un cupón por pedido', 9]] },
   { file: 'crud/crud-007-search-autocomplete.spec.ts', projects: ['chromium', 'firefox'], describe: 'Buscador', err: () => ERRORS.click('search/SearchBar.ts', 23, 'Ver todos los resultados'),
-    tests: [['Sugerencias al escribir', 6], ['Búsqueda sin resultados', 5], ['Búsqueda con errores tipográficos', 8]] },
+    tests: [['Sugerencias al escribir', 6], ['Búsqueda sin resultados', 5], ['Búsqueda con errores tipográficos', 8], ['Búsqueda tolerante a erratas', 8]] },
   { file: 'crud/crud-008-profile-addresses.spec.ts', projects: ['chromium'], describe: 'Mi cuenta · direcciones', err: () => ERRORS.click('profile/AddressForm.ts', 77, 'Guardar dirección'),
     tests: [['Añadir dirección de envío', 14], ['Editar dirección', 12], ['Marcar dirección predeterminada', 9], ['Eliminar dirección', 8]] },
   { file: 'crud/crud-009-admin-products.spec.ts', projects: ['chromium'], describe: 'Admin · productos', err: () => ERRORS.status('admin/ProductsApi.ts', 58, 500),
@@ -102,6 +102,10 @@ const BEHAVIOUR = {
   'Solo un cupón por pedido': { since: '2026-08-31' },
   'Compra con varios productos y cupón': { since: '2026-09-07' },
   'Valoraciones y comentarios': { since: '2026-09-14' },
+  // Tests eliminados: uno renombrado (tras fallar unos días) y otro borrado
+  'Búsqueda con errores tipográficos': { brokenBetween: ['2026-08-31', '2026-09-04'], until: '2026-09-04' },
+  'Búsqueda tolerante a erratas': { since: '2026-09-05' },
+  'Devolución fuera de plazo': { until: '2026-08-28' },
 }
 
 // ─── PNG mínimo (captura ficticia) ───
@@ -201,7 +205,7 @@ function buildRun(start, runIndex) {
       let chainBroken = false
       for (const [title, baseDur] of spec.tests) {
         const b = BEHAVIOUR[title] ?? {}
-        if (b.since && day < b.since) continue
+        if ((b.since && day < b.since) || (b.until && day > b.until)) continue
         const testId = `${fileId}-${hash(project + title)}`
         const annotations = []
         const results = []

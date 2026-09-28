@@ -84,6 +84,8 @@ export default {
   'tipos de error': 'error types',
   ocurrencia: 'occurrence',
   ocurrencias: 'occurrences',
+  nuevo: 'new',
+  nuevos: 'new',
 
   // ─── Carga y errores ───
   'Cargando {what}…': 'Loading {what}…',
@@ -202,7 +204,9 @@ export default {
   Capturas: 'Screenshots',
   'Captura del test': 'Test screenshot',
   'Descargar trace': 'Download trace',
-  'Ver vídeo': 'Watch video',
+  'Vídeo': 'Video',
+  'Abrir trace': 'Open trace',
+  'Abrir vídeo en otra pestaña': 'Open video in a new tab',
   'Contexto del error (snapshot de la página)': 'Error context (page snapshot)',
   'Salida por consola (stdout)': 'Console output (stdout)',
   'Este intento no tiene error ni adjuntos.': 'This attempt has no error or attachments.',
@@ -276,7 +280,24 @@ export default {
   'Agrupados por tipo de error · {n} distintos': 'Grouped by error type · {n} distinct',
 
   // ─── Errores ───
-  'Errores agrupados por tipo (mensaje, locator y línea donde falla). Cuenta fallos y reintentos de tests flaky.': 'Errors grouped by type (message, locator and failing line). Counts failures and flaky test retries.',
+  'Errores agrupados por tipo (mensaje, locator y línea donde falla). Cada test suma una vez por ejecución en la que falla o es flaky.': 'Errors grouped by type (message, locator and failing line). Each test counts once per run in which it fails or is flaky.',
+  'Histórico: todas las ejecuciones ({n}), sin tener en cuenta el periodo.': 'History: all runs ({n}), regardless of the period.',
+  '«Nuevo»: no había aparecido nunca antes del periodo.': '“New”: it had never shown up before the period.',
+  '«Ya no aparece»: todos sus tests se han vuelto a ejecutar después y no ha vuelto a salir.': '“No longer seen”: all its tests have run again since and it has not come back.',
+  'Del periodo': 'In the period',
+  'Histórico': 'History',
+  'Todos los estados': 'All states',
+  'Nuevos': 'New',
+  'Siguen apareciendo': 'Still showing up',
+  'Ya no aparecen': 'No longer seen',
+  'Nuevo': 'New',
+  'Ya no aparece': 'No longer seen',
+  '{n} ya no aparecen': '{n} no longer seen',
+  'Estado del error': 'Error state',
+  'No había aparecido nunca antes de este periodo': 'It had never shown up before this period',
+  'Todos los tests afectados se han vuelto a ejecutar después y no ha vuelto a salir': 'All affected tests have run again since and it has not come back',
+  'Ningún error coincide con los filtros.': 'No error matches the filters.',
+  'No hay errores.': 'No errors.',
   'Buscar en el error, locator o fichero…': 'Search error, locator or file…',
   'No hay errores en este periodo.': 'There are no errors in this period.',
   Veces: 'Count',
@@ -363,6 +384,7 @@ export default {
   'ya en el dashboard': 'already in the dashboard',
   'Seleccionar {name}': 'Select {name}',
   'No contiene ningún reporte HTML de Playwright': 'Contains no Playwright HTML report',
+  'Contiene otros zips en vez de reportes: descomprímelo en reports/ y aparecerán aquí para importarlos': 'Contains other zips instead of reports: extract it into reports/ and they will show up here to import',
   'No se puede leer (¿aún se está copiando?):': 'Cannot be read (is it still being copied?):',
 
   // ─── Guías ───

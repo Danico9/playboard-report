@@ -94,6 +94,21 @@ export function signatureRows(summary, runIndexes) {
       row.last = Math.max(row.last, runIndex)
     }
   }
+  // Nuevo: no había aparecido nunca antes del primer día del periodo.
+  // Ya no aparece: todos los tests afectados se han vuelto a ejecutar (sin saltarse) después de su última aparición.
+  // Si alguno no se ha ejecutado desde entonces no hay pruebas de que esté arreglado y sigue activo.
+  const start = Math.min(...runIndexes)
+  const firstEver = new Map()
+  for (const entries of Object.values(summary.results)) {
+    for (const [runIndex, outcome, , sig] of entries) {
+      if (sig != null && outcome !== 'passed' && !(firstEver.get(sig) <= runIndex)) firstEver.set(sig, runIndex)
+    }
+  }
+  for (const row of map.values()) {
+    row.isNew = firstEver.get(row.sig) >= start
+    row.gone = [...row.tests.keys()].every((key) =>
+      summary.results[key].some(([runIndex, outcome]) => runIndex > row.last && idx.has(runIndex) && outcome !== 'skipped'))
+  }
   return [...map.values()].sort((a, b) => b.count - a.count)
 }
 

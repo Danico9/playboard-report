@@ -13,7 +13,8 @@ export const MIME = {
   '.html': 'text/html; charset=utf-8', '.md': 'text/markdown; charset=utf-8', '.png': 'image/png',
   '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webm': 'video/webm', '.zip': 'application/zip',
   '.json': 'application/json', '.txt': 'text/plain; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css',
-  '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.ico': 'image/x-icon',
+  '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.ico': 'image/x-icon', '.ttf': 'font/ttf',
+  '.mjs': 'text/javascript', '.webmanifest': 'application/manifest+json',
 }
 
 function safeJoin(base, rel) {
@@ -21,12 +22,30 @@ function safeJoin(base, rel) {
   return p === base || p.startsWith(base + path.sep) ? p : null
 }
 
-function sendFile(res, file) {
+// Admite peticiones parciales (cabecera Range): sin ellas el navegador no deja adelantar ni atrasar los vídeos
+function sendFile(res, file, req) {
   if (!file || !fs.existsSync(file) || !fs.statSync(file).isFile()) {
     res.statusCode = 404
     return res.end('No encontrado')
   }
+  const size = fs.statSync(file).size
   res.setHeader('Content-Type', MIME[path.extname(file).toLowerCase()] ?? 'application/octet-stream')
+  res.setHeader('Accept-Ranges', 'bytes')
+  const m = /^bytes=(\d*)-(\d*)$/.exec(req?.headers.range ?? '')
+  if (m && (m[1] || m[2])) {
+    const start = m[1] ? Number(m[1]) : Math.max(0, size - Number(m[2]))
+    const end = m[1] && m[2] ? Math.min(Number(m[2]), size - 1) : size - 1
+    if (start > end || start >= size) {
+      res.statusCode = 416
+      res.setHeader('Content-Range', `bytes */${size}`)
+      return res.end()
+    }
+    res.statusCode = 206
+    res.setHeader('Content-Range', `bytes ${start}-${end}/${size}`)
+    res.setHeader('Content-Length', end - start + 1)
+    return fs.createReadStream(file, { start, end }).pipe(res)
+  }
+  res.setHeader('Content-Length', size)
   fs.createReadStream(file).pipe(res)
 }
 
@@ -223,7 +242,7 @@ export function createApi({ log = console.log } = {}) {
         notify('playboard:zips')
         return sendJson(res, results)
       }
-      if (p.startsWith('/reports/')) return sendFile(res, safeJoin(REPORTS_DIR, p.slice('/reports/'.length)))
+      if (p.startsWith('/reports/')) return sendFile(res, safeJoin(REPORTS_DIR, p.slice('/reports/'.length)), req)
     } catch (e) {
       res.statusCode = 500
       return res.end(String(e.message))

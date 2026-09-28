@@ -91,6 +91,7 @@ function zipPathOf(file) {
 }
 
 const zipListCache = new Map()
+const NESTED_ZIPS = 'Contiene otros zips en vez de reportes: descomprímelo en reports/ y aparecerán aquí para importarlos'
 
 export function listZips() {
   if (!fs.existsSync(REPORTS_DIR)) return []
@@ -108,7 +109,12 @@ export function listZips() {
         // Solo se descomprimen los index.html cuyo nombre de carpeta no lleva fecha; del resto basta con el nombre
         const contents = unzipSync(fs.readFileSync(zipPath), { filter: (f) => { names.push(f.name); return needsContent(f.name) } })
         entry.runs = [...runsInZip(file, names, contents).values()]
-        if (!entry.runs.length) entry.error = 'No contiene ningún reporte HTML de Playwright'
+        // Los zips dentro de otro zip no se abren (un zip de zips puede ocupar varios GB): se pide descomprimirlo a mano
+        if (!entry.runs.length) {
+          entry.error = names.some((n) => n.toLowerCase().endsWith('.zip'))
+            ? NESTED_ZIPS
+            : 'No contiene ningún reporte HTML de Playwright'
+        }
       } catch (e) {
         entry.error = `No se puede leer (¿aún se está copiando?): ${e.message}`
       }

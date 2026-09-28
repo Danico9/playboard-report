@@ -21,7 +21,7 @@ export default function RunDetail() {
   const res = useRunDetail(id)
   const knownIssues = useKnownIssues()
 
-  const [statuses, setStatuses] = useState(() => new Set(['failed', 'flaky']))
+  const [statuses, setStatuses] = useState(() => new Set(['failed']))
   const [query, setQuery] = useState('')
   const [mod, setMod] = useState('')
   const [group, setGroup] = useState('file')

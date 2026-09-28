@@ -46,7 +46,7 @@ Mapeo de estados: `expected` → pasado, `unexpected` → fallido, `flaky` → f
   - `summary.json`: ejecuciones, metadatos de tests, `results[clave] = [[runIndex, outcome, duración, firma, reintentos], …]` y firmas. Lo carga la app al arrancar.
   - `runs/<id>.json`: el detalle de una ejecución. Se carga al abrirla.
 - **Incremental.** `manifest.json` guarda el tamaño y la fecha de cada `index.html`. Los que no cambian se reconstruyen desde `runs/<id>.raw.json` (el JSON de Playwright sin `steps`), sin volver a leer el HTML. Si cambia el formato de salida, hay que subir `SCHEMA_VERSION`.
-- **Zips.** `listZips()` lista los reportes que contiene cada zip sin descomprimirlo entero. `importZip()` extrae los reportes que falten, valida cada uno y solo entonces borra el zip.
+- **Zips.** `listZips()` lista los reportes que contiene cada zip sin descomprimirlo entero. Los zips dentro de otro zip no se abren (un zip de zips puede ocupar varios GB y se lee entero en memoria): ese zip sale como no válido con un aviso para descomprimirlo en `reports/`. `importZip()` extrae los reportes que falten, valida cada uno y solo entonces borra el zip.
 - **Carpetas sueltas.** `listFolders()` busca, en cada carpeta de `reports/` (salvo `playwright-reports/`), subcarpetas con `index.html` hasta 4 niveles, sin entrar en `data/` ni `trace/`. `importFolder()` valida cada reporte y lo mueve a `playwright-reports/<id>` con `moveDir()` (reintenta si Windows bloquea la carpeta y, si no puede, copia y borra). Los duplicados se borran y después solo se eliminan las carpetas que han quedado vacías: cualquier otro fichero del usuario se conserva.
 - `GET /api/zips` devuelve zips y carpetas (`kind: 'zip' | 'folder'`), y `POST /api/zips/import` recibe `{ items: [{ kind, name }] }`.
 
@@ -67,7 +67,7 @@ El módulo que se muestra lo decide el cliente (`moduleOfTest` en `src/config/mo
 | `GET /api/notes/file?path=` | Contenido de una nota |
 | `GET /api/notes/search?q=` | Búsqueda de texto en las notas |
 | `GET /api/events` | Server-Sent Events: `playboard:data`, `playboard:zips`, `playboard:notes` |
-| `GET /reports/**` | Ficheros de los reportes (capturas, `index.html` original…) |
+| `GET /reports/**` | Ficheros de los reportes (capturas, vídeos, trazas, `index.html` original y visor de trazas `trace/`). Admite `Range` para poder moverse por los vídeos |
 
 Todas las rutas de ficheros se validan para no salir de su carpeta. `createApi()` devuelve el middleware y `handleFsEvent()`, que recibe los cambios de ficheros: en desarrollo los da el watcher de Vite (`plugins/vite-plugin-playboard.js`) y en el ejecutable `fs.watch`. Los avisos llegan al navegador por Server-Sent Events (`/api/events`) y la app recarga solo lo necesario.
 
@@ -123,7 +123,7 @@ Configuración local (`src/config/*.local.js`):
 - `pages/Tests.jsx`: índice tipo reporte de Playwright (carpeta → fichero → `describe` → test). Los tests se ordenan por la línea de `location`.
 - `components/TestStatsTable.jsx`: tabla de estadísticas por test, agrupable por módulo o fichero; la usa la pestaña «Tests por módulo» de `pages/Modules.jsx`.
 - `lib/importResults.js`: resultados de «Importar» fuera del componente (y en `sessionStorage`), para que sigan a la vista al cambiar de pantalla hasta que se cierren.
-- `lib/stats.js`: cálculos puros (estadísticas por test, módulo y firma de error, y comparación entre ejecuciones).
+- `lib/stats.js`: cálculos puros (estadísticas por test, módulo y firma de error, y comparación entre ejecuciones). `signatureRows()` marca cada firma como `isNew` (su primera aparición en todo el histórico cae dentro de las ejecuciones pedidas) y `gone` (todos sus tests se han vuelto a ejecutar, sin saltarse, después de su última aparición).
 - `config/`: estados y colores, módulos y notas. Cada usuario los adapta con `*.local.js` (en el `.gitignore`), que se cargan con `import.meta.glob` si existen.
 - `lib/theme.js`: tema oscuro (por defecto) o claro, en `<html data-theme>`. Los tokens de cada tema están en `styles/tokens.css`, y los colores de las gráficas SVG en `config/status.js` (`CHART_THEMES`).
 - `pages/`: una pantalla por ruta. `components/`: piezas reutilizables (gráficas, panel de test, visor Markdown…).

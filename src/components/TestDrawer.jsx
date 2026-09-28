@@ -59,10 +59,23 @@ function Attempt({ attempt, runId, openShot, timeZone }) {
         </section>
       )}
 
+      {attempt.video && (
+        <section className="stack">
+          <h3>{t('Vídeo')}</h3>
+          <video className="test-video" src={base + attempt.video} controls preload="metadata" />
+        </section>
+      )}
+
       {(attempt.trace || attempt.video) && (
         <div className="row wrap">
+          {/* El visor de trazas va dentro de cada reporte (trace/), igual que en el reporte HTML de Playwright */}
+          {attempt.trace && (
+            <a className="btn primary" href={`${base}trace/index.html?trace=${encodeURIComponent(new URL(base + attempt.trace, window.location.href).href)}`} target="_blank" rel="noreferrer">
+              {t('Abrir trace')} ↗
+            </a>
+          )}
           {attempt.trace && <a className="btn" href={base + attempt.trace} download>{t('Descargar trace')}</a>}
-          {attempt.video && <a className="btn" href={base + attempt.video} target="_blank" rel="noreferrer">{t('Ver vídeo')}</a>}
+          {attempt.video && <a className="btn" href={base + attempt.video} target="_blank" rel="noreferrer">{t('Abrir vídeo en otra pestaña')} ↗</a>}
         </div>
       )}
 
@@ -80,7 +93,7 @@ function Attempt({ attempt, runId, openShot, timeZone }) {
         </details>
       )}
 
-      {!attempt.error && !attempt.screenshots.length && !attempt.stdout && (
+      {!attempt.error && !attempt.screenshots.length && !attempt.stdout && !attempt.trace && !attempt.video && (
         <div className="muted small">{t('Este intento no tiene error ni adjuntos.')}</div>
       )}
     </div>

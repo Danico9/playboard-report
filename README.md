@@ -36,13 +36,17 @@ El reporte HTML de Playwright es muy completo, pero solo muestra una ejecución.
 - **Selector de periodo común a todas las pantallas:** Todo, Año, Mes, Semana, Día o un Rango de fechas. El periodo va en la URL, así que puedes guardar o compartir la vista.
 - **Calendario:** heatmap anual y calendario mensual, con cada día coloreado según su % de éxito.
 - **Detalle de ejecución:** desglose por módulo y lista de tests con filtros y agrupación. Cada test abre un panel con:
-  - el error con sus colores, las capturas, el contexto del error y el stdout;
+  - el error con sus colores, las capturas, el vídeo (con controles para adelantar y atrasar), el contexto del error y el stdout;
+  - el botón **Abrir trace**, que abre la traza en el visor de Playwright que va dentro del propio reporte (también se puede descargar);
   - los reintentos y su historial en todas las ejecuciones.
 - **Tests:** índice de todos los tests como en el reporte de Playwright (carpeta → fichero → `describe` → test, en el orden del código), pero con los datos de todo el periodo.
   - Cada test muestra su estado en la última ejecución, su % de éxito, fallos, flaky, duración media y una fila de cuadrados de colores, uno por ejecución.
   - Filtros por estado con contadores (como en Playwright) y «Inestables en el periodo», buscador (test, fichero, tag o módulo), módulo, proyecto y rango de fechas con atajos (últimos 7, 30 o 90 días).
   - Carpetas y ficheros se pliegan y despliegan. Los filtros van en la URL: se conservan al abrir un test y volver atrás.
-- **Errores:** agrupados por tipo (mensaje, locator y línea donde falla), con los tests afectados y su evolución.
+- **Errores:** agrupados por tipo (mensaje, locator y línea donde falla), con los tests afectados y su evolución. Cada test suma una vez por ejecución en la que falla o es flaky. Dos pestañas:
+  - **Del periodo:** los errores del periodo elegido. Se marcan como **Nuevo** los que no habían salido nunca antes del periodo.
+  - **Histórico:** todos los errores de todas las ejecuciones, sin tener en cuenta el periodo.
+  - En ambas se marcan como **Ya no aparece** los errores cuyos tests afectados se han vuelto a ejecutar después y no lo han repetido. Si alguno no se ha ejecutado desde entonces, el error sigue contando como activo. Se puede filtrar por estado (nuevos, siguen apareciendo, ya no aparecen).
 - **Módulos:** dos pestañas.
   - **Resumen:** % de éxito por área funcional y sus tests más problemáticos. Al pulsar un módulo se despliegan todos sus tests.
   - **Tests por módulo:** tabla de estadísticas de cada test, agrupada por módulo o por fichero (o en lista), ordenable por columnas.
@@ -91,6 +95,7 @@ En los tres casos:
 - Se aceptan carpetas con cualquier nombre. Si se llama `AAAA-MM-DD_HH-mm-ss_<suite>`, se respeta. Si no (por ejemplo, la carpeta por defecto `playwright-report/`), se nombra con la hora de inicio que guarda el propio reporte.
 - Si un reporte ya estaba importado, no se duplica: al importar se borra el zip o la copia duplicada.
 - Antes de mover o borrar nada se comprueba que el reporte se lee bien.
+- Un zip que contiene **otros zips** (por ejemplo, un zip con varios `artifacts (N).zip` dentro) no se abre: sale como «No válido» con el aviso de descomprimirlo. Descomprímelo en `reports/` y cada zip de dentro aparecerá en **Importar**.
 
 ```
 reports/
@@ -254,7 +259,7 @@ Más detalle en [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Solución de problemas
 
-- **Un zip sale como «No válido»:** no contiene ningún `index.html` de Playwright con el reporte embebido, o aún se está copiando. Espera a que termine la copia y pulsa *Actualizar*.
+- **Un zip sale como «No válido»:** no contiene ningún `index.html` de Playwright con el reporte embebido, contiene otros zips (descomprímelo en `reports/`) o aún se está copiando. Espera a que termine la copia y pulsa *Actualizar*.
 - **La primera carga tarda:** se están procesando todos los reportes. Las siguientes cargas usan la caché de `.cache/`.
 - **Los datos no se actualizan:** borra la carpeta `.cache/` y reinicia `npm run dev`.
 - **Puerto ocupado:** `npm run dev -- --port 5180`.

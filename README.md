@@ -143,7 +143,32 @@ Funciones opcionales si existen ciertas notas (rutas relativas a `notes/`; se pu
 |---|---|
 | `KNOWN-ISSUES.md` | Los tests que menciona por su identificador (p. ej. `flows-020` o `crud 8`) se marcan como *fallo conocido* en los reportes, con sus enlaces a Jira. |
 | `HISTORY.md` | Cada sección `## <nombre-del-spec>` se enlaza desde la ficha del test. |
-| `COVERAGE.md` | Los encabezados `## Ámbito — 40 casos · 30 ✅` se muestran como barras de cobertura. |
+| `COVERAGE.md` | Cada encabezado `##` es un ámbito y se muestra como barra de cobertura (ver abajo). |
+
+### Cobertura por ámbito (`COVERAGE.md`)
+
+Sirve para cualquier proyecto: solo hace falta una nota con un apartado `##` por ámbito (módulo, pantalla, épica…). Si quieres usar otra nota, cambia su ruta con `COVERAGE_NOTE` en `src/config/notes.local.js`. Los números de cada ámbito salen de:
+
+1. **El encabezado**, si los trae: `## Pagos — 28 casos · 19 ✅` (también vale `cases`, y `–` o `-` en vez de `—`). Tienen prioridad, así que puedes aplicar tus propios criterios, como excluir casos o sumar otros.
+2. **Si no**, se cuentan los casos del apartado, incluidos sus subapartados:
+   - filas de tabla con una celda que solo tiene el estado: `✅`, `❌`, `🟡`, `⚠️`, `🚫`, `⏳` o `⬜`;
+   - elementos de lista que empiezan por un estado o por una casilla (`- [x]`, `- [ ]`).
+
+   Cuentan como automatizados `✅` y `[x]`, y el resto de estados como pendientes.
+
+```md
+## Pagos
+
+| # | Caso | Estado |
+|---|---|---|
+| 1 | Pago con tarjeta | ✅ |
+| 2 | Pago con PayPal | ❌ |
+
+- [x] Tarjetas guardadas
+- [ ] Autenticación 3DS
+```
+
+Cada barra enlaza con su apartado de la nota. Los apartados sin números ni casos no se muestran.
 
 ## Tus datos no se comparten
 

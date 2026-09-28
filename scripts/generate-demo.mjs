@@ -401,6 +401,21 @@ Revisar flows-007: el paso 3 (marcar como enviado) falla de forma intermitente y
 ## 5. Pagos — 28 casos · 19 ✅ · ~68%
 ## 6. Pedidos y devoluciones — 22 casos · 12 ✅ · ~55%
 ## 7. Administración — 35 casos · 14 ✅ · ~40%
+
+## 8. Notificaciones
+
+Sin números en el encabezado: la app cuenta los casos de las tablas y listas del apartado.
+
+| # | Caso | Estado |
+|---|---|---|
+| 1 | Correo de confirmación del pedido | ✅ |
+| 2 | Correo de pedido enviado | ✅ |
+| 3 | Aviso de bajada de precio | ❌ |
+| 4 | Recordatorio de carrito abandonado | 🟡 |
+
+### Notificaciones push
+- [x] Pedido en reparto
+- [ ] Pedido entregado
 `,
   'modules/checkout.md': `# Módulo: checkout
 

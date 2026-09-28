@@ -123,6 +123,7 @@ Configuración local (`src/config/*.local.js`):
 - `pages/Tests.jsx`: índice tipo reporte de Playwright (carpeta → fichero → `describe` → test). Los tests se ordenan por la línea de `location`.
 - `components/TestStatsTable.jsx`: tabla de estadísticas por test, agrupable por módulo o fichero; la usa la pestaña «Tests por módulo» de `pages/Modules.jsx`.
 - `lib/importResults.js`: resultados de «Importar» fuera del componente (y en `sessionStorage`), para que sigan a la vista al cambiar de pantalla hasta que se cierren.
+- `lib/coverage.js`: `parseCoverage()` saca la cobertura por ámbito de la nota `COVERAGE_NOTE`: los números del encabezado `##` o, si no los tiene, las filas de tabla y los elementos de lista con estado de ese apartado. Recibe los encabezados de `/api/notes` para usar los mismos slugs en los enlaces.
 - `lib/stats.js`: cálculos puros (estadísticas por test, módulo y firma de error, y comparación entre ejecuciones). `signatureRows()` marca cada firma como `isNew` (su primera aparición en todo el histórico cae dentro de las ejecuciones pedidas) y `gone` (todos sus tests se han vuelto a ejecutar, sin saltarse, después de su última aparición).
 - `config/`: estados y colores, módulos y notas. Cada usuario los adapta con `*.local.js` (en el `.gitignore`), que se cargan con `import.meta.glob` si existen.
 - `lib/theme.js`: tema oscuro (por defecto) o claro, en `<html data-theme>`. Los tokens de cada tema están en `styles/tokens.css`, y los colores de las gráficas SVG en `config/status.js` (`CHART_THEMES`).

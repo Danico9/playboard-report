@@ -6,10 +6,8 @@ import { NotesHelp } from '../components/Help'
 import { COVERAGE_NOTE, categoryOf, categoryRank, noteLabel } from '../config/notes'
 import { useNoteFile, useNotesIndex, useResource } from '../lib/store'
 import { fmtDate } from '../lib/format'
+import { parseCoverage } from '../lib/coverage'
 import { getLang, t } from '../i18n'
-
-// "## 1. Autenticación — 24 casos · 20 ✅ · ~83% …" o "## Pagos — 28 casos · 19 ✅"
-const COVERAGE_RE = /^(?:\d+\.\s*)?(.+?)\s+—\s+(\d+)\s+casos(?:\s*\([^)]*\))?\s+·\s+(\d+)\s+✅/
 
 function useDebounced(value, ms) {
   const [v, setV] = useState(value)
@@ -136,21 +134,18 @@ function Highlight({ text, q }) {
 
 function Coverage({ notes }) {
   const note = notes.find((n) => n.path === COVERAGE_NOTE)
-  const rows = (note?.headings ?? [])
-    .filter((h) => h.level === 2)
-    .map((h) => ({ h, m: h.text.match(COVERAGE_RE) }))
-    .filter((x) => x.m)
-    .map(({ h, m }) => ({ slug: h.slug, name: m[1], total: +m[2], done: +m[3] }))
+  const res = useNoteFile(note ? COVERAGE_NOTE : null)
+  const rows = useMemo(() => (note && res.data ? parseCoverage(res.data, note.headings ?? []) : []), [note, res.data])
   if (!rows.length) return null
   return (
     <div className="card">
       <div className="card-head">
-        <div><h2>{t('Cobertura por ámbito')}</h2><p>{t('Casos automatizados (✅) según los encabezados de')} <code>{COVERAGE_NOTE}</code></p></div>
+        <div><h2>{t('Cobertura por ámbito')}</h2><p>{t('Casos automatizados (✅) por apartado de')} <code>{COVERAGE_NOTE}</code>{t(': los números del encabezado o, si no los tiene, los casos contados en sus tablas y listas.')}</p></div>
         <Link className="btn" to={`/notas/${COVERAGE_NOTE}`}>{t('Abrir nota')}</Link>
       </div>
       <div className="stack" style={{ gap: 8 }}>
         {rows.map((r) => (
-          <Link key={r.slug} to={`/notas/${COVERAGE_NOTE}#${r.slug}`} className="row" style={{ color: 'inherit', textDecoration: 'none' }} title={t('{a} de {b} casos', { a: r.done, b: r.total })}>
+          <Link key={r.slug} to={`/notas/${COVERAGE_NOTE}#${r.slug}`} className="row" style={{ color: 'inherit', textDecoration: 'none' }} title={`${t('{a} de {b} casos', { a: r.done, b: r.total })} · ${r.source === 'heading' ? t('según el encabezado') : t('contados en el apartado')}`}>
             <span className="truncate" style={{ width: 260, flex: 'none' }}>{r.name}</span>
             <span style={{ flex: 1, height: 10, background: 'var(--surface-2)', borderRadius: 4, overflow: 'hidden' }}>
               <span style={{ display: 'block', height: '100%', width: `${(r.done / r.total) * 100}%`, background: 'var(--accent)', borderRadius: '0 4px 4px 0' }} />

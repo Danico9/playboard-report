@@ -52,5 +52,6 @@ export function noteLabel(notePath) {
 export const KNOWN_ISSUES_NOTE = local.KNOWN_ISSUES_NOTE ?? 'KNOWN-ISSUES.md'
 // Histórico por spec: cada «## <nombre-del-spec>» se enlaza desde la ficha del test
 export const HISTORY_NOTE = local.HISTORY_NOTE ?? 'HISTORY.md'
-// Cobertura: encabezados «## Ámbito — N casos · M ✅» se muestran como barras en la portada de Notas
+// Cobertura: cada «## Ámbito» se muestra como una barra en la portada de Notas, con los números del encabezado
+// («## Ámbito — N casos · M ✅») o contando los casos de sus tablas y listas (ver src/lib/coverage.js)
 export const COVERAGE_NOTE = local.COVERAGE_NOTE ?? 'COVERAGE.md'

@@ -102,8 +102,9 @@ export function NotesHelp({ open = false }) {
           </li>
           <li>
             Optional extras: if <code>{KNOWN_ISSUES_NOTE}</code> exists, the tests it mentions by id (e.g. <code>flows-020</code>)
-            are flagged as known failures in the reports. If <code>{COVERAGE_NOTE}</code> exists with headings like
-            <code> ## Area — 40 casos · 30 ✅</code>, its coverage is shown. Paths can be changed in <code>src/config/notes.local.js</code>.
+            are flagged as known failures in the reports. If <code>{COVERAGE_NOTE}</code> exists, each <code>##</code> heading is an area
+            and its coverage is shown: from the heading (<code>## Area — 40 cases · 30 ✅</code>) or, if it has no numbers, counting the table rows and
+            list items of that section that carry a state (<code>✅</code>, <code>❌</code>, <code>[x]</code>, <code>[ ]</code>…). Paths can be changed in <code>src/config/notes.local.js</code>.
           </li>
         </ol>
       ) : (
@@ -119,8 +120,9 @@ export function NotesHelp({ open = false }) {
           </li>
           <li>
             Extras opcionales: si existe <code>{KNOWN_ISSUES_NOTE}</code>, los tests que menciona por su identificador (p. ej. <code>flows-020</code>)
-            se marcan como fallo conocido en los reportes. Si existe <code>{COVERAGE_NOTE}</code> con encabezados del tipo
-            <code> ## Ámbito — 40 casos · 30 ✅</code>, se muestra su cobertura. Las rutas se cambian en <code>src/config/notes.local.js</code>.
+            se marcan como fallo conocido en los reportes. Si existe <code>{COVERAGE_NOTE}</code>, cada encabezado <code>##</code> es un ámbito
+            y se muestra su cobertura: la del encabezado (<code>## Ámbito — 40 casos · 30 ✅</code>) o, si no lleva números, contando las filas de tabla y
+            los elementos de lista del apartado que llevan un estado (<code>✅</code>, <code>❌</code>, <code>[x]</code>, <code>[ ]</code>…). Las rutas se cambian en <code>src/config/notes.local.js</code>.
           </li>
         </ol>
       )}

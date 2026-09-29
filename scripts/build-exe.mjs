@@ -9,9 +9,9 @@
 //
 // Configuración personal (src/config/*.local.js: nombres de módulos, alias, reglas, categorías de notas…):
 //   npm run build:exe                        → la incluye: los módulos y las notas se ven como en npm run dev.
-//   npm run build:exe -- --no-local-config   → ejecutable genérico, sin ella: úsalo si lo vas a compartir fuera de tu equipo.
+//   npm run build:exe:generic                → ejecutable genérico, sin ella: úsalo si lo vas a compartir fuera de tu equipo.
+//                                              (equivale a «npm run build:exe -- --no-local-config», que en PowerShell no pasa el «--»)
 // En ningún caso se incrustan reportes ni notas: se leen de reports/ y notes/ junto al ejecutable.
-// El «--» hace falta para que npm pase la opción al script, y la opción debe escribirse exacta: si no se reconoce, se incluye la configuración.
 
 import fs from 'node:fs'
 import path from 'node:path'
@@ -37,12 +37,25 @@ if (major < 21 || (major === 21 && minor < 7)) {
 
 const step = (msg) => console.log(`\n▸ ${msg}`)
 
-const generic = process.argv.includes('--no-local-config')
+// La opción puede llegar de dos formas: como argumento (npm run build:exe:generic, o «-- --no-local-config» en bash/CMD)
+// o como configuración de npm, porque PowerShell se come el «--» y npm se queda la opción (npm_config_local_config).
+// Una opción mal escrita no se ignora: se detiene la compilación para no incluir la configuración personal por error.
+const LOCAL_CONFIG_ENV = 'npm_config_local_config'
+const unknownArgs = process.argv.slice(2).filter((a) => a !== '--no-local-config')
+const typoEnv = Object.keys(process.env).filter((k) => /^npm_config_(no_)?local_conf/i.test(k) && k.toLowerCase() !== LOCAL_CONFIG_ENV)
+if (unknownArgs.length || typoEnv.length) {
+  const bad = [...unknownArgs, ...typoEnv.map((k) => `--${k.slice('npm_config_'.length).replace(/_/g, '-')}`)]
+  console.error(`\nOpción no reconocida: ${bad.join(', ')}. No se ha generado nada.`)
+  console.error('Para el ejecutable genérico (sin tu configuración local) usa: npm run build:exe:generic')
+  process.exit(1)
+}
+// npm guarda «--no-local-config» como valor vacío o «false»
+const generic = process.argv.includes('--no-local-config') || ['', 'false'].includes(process.env[LOCAL_CONFIG_ENV])
 if (generic) process.env.VITE_PLAYBOARD_NO_LOCAL = '1'
 if (fs.readdirSync(path.join(ROOT, 'src', 'config')).some((f) => f.endsWith('.local.js'))) {
   console.log(generic
     ? '\nEjecutable genérico: no incluye tu configuración de src/config/*.local.js.'
-    : '\nAviso: el ejecutable incluye tu configuración de src/config/*.local.js. Para compartirlo fuera de tu equipo usa: npm run build:exe -- --no-local-config')
+    : '\nAviso: el ejecutable incluye tu configuración de src/config/*.local.js. Para compartirlo fuera de tu equipo usa: npm run build:exe:generic')
 }
 
 step('Compilando la app (vite build)')
@@ -151,9 +164,15 @@ data (".cache") go with it, and they may contain sensitive information (screensh
 
 const size = (fs.statSync(EXE).size / 1e6).toFixed(0)
 step(`Listo: ${path.relative(ROOT, EXE)} (${size} MB)`)
-// Si la carpeta ya se ha usado, tiene datos del usuario: se avisa para no compartirla entera
+// Si la carpeta ya se ha usado, tiene datos del usuario: se avisa para no compartirla entera.
+// En .cache/ solo cuentan las ejecuciones procesadas (runs/): un resumen vacío de un arranque sin reportes no es un dato.
 const hasFiles = (dir) => fs.existsSync(dir) && fs.readdirSync(dir, { recursive: true }).some((f) => fs.statSync(path.join(dir, f)).isFile())
-const used = ['reports', 'notes', '.cache'].filter((d) => hasFiles(path.join(OUT, d)))
+const cacheRuns = (dir) => fs.existsSync(dir) && fs.readdirSync(dir).some((d) => hasFiles(path.join(dir, d, 'runs')))
+const used = [
+  hasFiles(path.join(OUT, 'reports')) && 'reports',
+  hasFiles(path.join(OUT, 'notes')) && 'notes',
+  cacheRuns(path.join(OUT, '.cache')) && '.cache',
+].filter(Boolean)
 if (used.length) {
   console.log(`  ⚠ ${used.map((d) => `${d}/`).join(', ')} de ${path.relative(ROOT, OUT)} ${used.length > 1 ? 'tienen' : 'tiene'} datos tuyos: para compartir el programa, comparte solo ${path.basename(EXE)}.`)
 } else {

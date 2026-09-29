@@ -25,6 +25,7 @@
     "preview": "vite preview",
     "start": "node server/standalone.mjs",
     "build:exe": "node scripts/build-exe.mjs",
+    "build:exe:generic": "node scripts/build-exe.mjs --no-local-config",
     "ingest": "node scripts/ingest-reports.mjs",
     "lint": "eslint ."
   },

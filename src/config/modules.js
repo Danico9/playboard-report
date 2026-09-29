@@ -17,7 +17,7 @@
 
 import { t } from '../i18n'
 
-// Se ignora la configuración local en la demo (npm run demo) y en el ejecutable genérico (build:exe --no-local-config)
+// Se ignora la configuración local en la demo (npm run demo) y en el ejecutable genérico (npm run build:exe:generic)
 const local = import.meta.env.VITE_PLAYBOARD_DEMO === '1' || import.meta.env.VITE_PLAYBOARD_NO_LOCAL === '1' ? {} : Object.values(import.meta.glob('./modules.local.js', { eager: true }))[0] ?? {}
 
 export const MODULE_ALIASES = {

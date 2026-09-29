@@ -211,7 +211,7 @@ Leer un `index.html` de Playwright es lento: lleva todos los resultados comprimi
 El `.exe` solo contiene la aplicación. Tus reportes, tus notas y la caché se leen y se escriben en las carpetas `reports/`, `notes/` y `.cache/` que hay **junto a él**, nunca dentro. Aun así:
 
 - **Para compartir el programa, comparte solo el `.exe`** (o una carpeta recién generada). Si compartes la carpeta en la que ya lo has usado, se van con ella tus reportes, tus notas y la caché.
-- `npm run build:exe` incluye tu configuración local (nombres de módulos y categorías de notas). Para dárselo a otra persona, genera la versión genérica con `npm run build:exe -- --no-local-config` (ver [Ejecutable](#ejecutable-sin-instalar-nada)).
+- `npm run build:exe` incluye tu configuración local (nombres de módulos y categorías de notas). Para dárselo a otra persona, genera la versión genérica con `npm run build:exe:generic` (ver [Ejecutable](#ejecutable-sin-instalar-nada)).
 
 ### Uso local
 
@@ -282,23 +282,23 @@ $env:PLAYBOARD_TZ="Europe/Madrid"; npm run dev  # Windows PowerShell
 Para que otras personas usen playboard-report sin instalar Node.js ni clonar el repositorio:
 
 ```bash
-npm run build:exe                        # incluye tu configuración de src/config/*.local.js
-npm run build:exe -- --no-local-config   # ejecutable genérico, para compartir fuera de tu equipo
+npm run build:exe           # incluye tu configuración de src/config/*.local.js
+npm run build:exe:generic   # ejecutable genérico, para compartir fuera de tu equipo
 ```
 
 ### ¿Con o sin tu configuración?
 
 Los dos comandos generan el mismo ejecutable. Solo cambia si lleva dentro tu configuración personal, es decir, los ficheros `src/config/*.local.js`:
 
-| | `npm run build:exe` | `npm run build:exe -- --no-local-config` |
+| | `npm run build:exe` | `npm run build:exe:generic` |
 |---|---|---|
 | `modules.local.js`: nombres legibles de los módulos, alias y reglas `MODULE_RULES` | Incluido: los módulos se ven como en `npm run dev` (p. ej. «Carrito») | No incluido: los módulos se siguen detectando (tag, convención de nombre o carpeta), pero se muestran con su identificador en mayúsculas (p. ej. `CART`) |
 | `notes.local.js`: categorías de notas y nombres de las notas especiales | Incluido | No incluido: se usan las categorías y nombres por defecto |
 | Para qué sirve | Para usarlo tú (o dentro de tu equipo) | Para compartirlo fuera de tu equipo sin que lleve nombres de tu suite o tu empresa |
 
 - **Los reportes y las notas nunca van dentro del ejecutable**, en ninguno de los dos casos: siempre se leen de las carpetas `reports/` y `notes/` que tiene al lado. La diferencia es solo cómo se muestran los nombres.
-- El `--` del medio es necesario: le dice a npm que la opción es para el script. Sin él, npm se queda la opción y no llega.
-- La opción tiene que escribirse completa, `--no-local-config`. Si no se reconoce (por ejemplo, `--no-local-confi`), se genera el ejecutable normal, **con** tu configuración.
+- `npm run build:exe:generic` equivale a `npm run build:exe -- --no-local-config`, pero funciona igual en cualquier terminal: en PowerShell el `--` no llega a npm (aun así, el script también reconoce la opción en ese caso).
+- Si escribes mal la opción (por ejemplo, `--no-local-confi`), el script **se detiene sin generar nada**, para no incluir tu configuración por error.
 - Al terminar, el script indica qué tipo de ejecutable ha generado si tienes ficheros `*.local.js`: «Ejecutable genérico…» o «Aviso: el ejecutable incluye tu configuración…».
 - Si no tienes ningún `*.local.js`, los dos comandos dan exactamente el mismo resultado.
 

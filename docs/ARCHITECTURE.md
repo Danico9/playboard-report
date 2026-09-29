@@ -105,11 +105,11 @@ El resultado va a `release/playboard-report-<sistema>-<arquitectura>/`, con `rep
 Configuración local (`src/config/*.local.js`):
 
 - `npm run build:exe`: se incluyen en la compilación, igual que en `npm run dev`. Los nombres de módulos y las categorías de notas quedan dentro del ejecutable.
-- `npm run build:exe -- --no-local-config`: se define `VITE_PLAYBOARD_NO_LOCAL=1` y `config/modules.js` y `config/notes.js` ignoran los `*.local.js`
+- `npm run build:exe:generic` (= `npm run build:exe -- --no-local-config`): se define `VITE_PLAYBOARD_NO_LOCAL=1` y `config/modules.js` y `config/notes.js` ignoran los `*.local.js`
   (igual que en la demo), así que no llegan al bundle. Es el ejecutable genérico para compartir fuera del equipo.
 - En ningún caso se incrustan reportes ni notas: se leen de `reports/` y `notes/` junto al ejecutable.
-- El `--` es necesario para que npm pase la opción al script, y esta se compara de forma exacta (`process.argv.includes`):
-  una opción mal escrita se ignora y se genera el ejecutable con la configuración local. El script avisa al final de cuál ha generado.
+- La opción llega como argumento o, si PowerShell se come el `--`, como configuración de npm (`npm_config_local_config` vacía o `false`): se aceptan las dos.
+  Cualquier otro argumento, o una variable `npm_config_*local_conf*` con otro nombre (una errata), detiene el script sin generar nada. Al terminar, avisa de qué tipo de ejecutable ha generado.
 
 ## Variables de entorno
 
@@ -120,7 +120,7 @@ Configuración local (`src/config/*.local.js`):
 | `PLAYBOARD_ROOT` | Raíz de datos y caché. La fija el ejecutable (su propia carpeta) |
 | `PLAYBOARD_PORT` | Puerto del servidor de `npm start` y del ejecutable (por defecto 4174) |
 | `VITE_PLAYBOARD_DEMO` | La pone `npm run demo`: ignora los `*.local.js` y usa los nombres de módulo de la demo |
-| `VITE_PLAYBOARD_NO_LOCAL` | La pone `build:exe --no-local-config`: compila sin los `*.local.js` |
+| `VITE_PLAYBOARD_NO_LOCAL` | La pone `build:exe:generic`: compila sin los `*.local.js` |
 
 ## Datos de demostración
 

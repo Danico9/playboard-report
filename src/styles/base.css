@@ -409,3 +409,17 @@ details.fold[open] > summary { margin-bottom: 8px; }
 .pager { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; padding: 12px 14px; border-top: 1px solid var(--border); }
 .pager .btn { min-width: 32px; justify-content: center; }
 .tree-pager .pager { border-top: 0; }
+
+/* Entornos */
+.select.on { border-color: var(--accent); color: var(--text); }
+.env-chip { white-space: nowrap; }
+.env-chip > span { margin-right: 4px; opacity: 0.7; }
+.env-form { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.env-form .input { min-width: 280px; }
+.env-pending li { align-items: flex-start; flex-wrap: wrap; }
+.env-signals { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.env-details > summary { list-style: none; }
+.env-details > summary::-webkit-details-marker { display: none; }
+.env-details[open] > summary { margin-bottom: 8px; }
+.btn.link { background: none; border-color: transparent; color: var(--accent); padding: 0 4px; }
+.btn.link:hover { text-decoration: underline; }

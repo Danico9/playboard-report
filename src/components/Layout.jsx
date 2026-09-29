@@ -1,6 +1,7 @@
 import { NavLink, Outlet, useLocation } from 'react-router'
 import { periodSearch } from '../lib/usePeriod'
 import { pendingZips, useSummary, useZips } from '../lib/store'
+import { hasEnvironments, pendingEnvironments } from '../lib/environments'
 import { fmtDate, plural } from '../lib/format'
 import { setTheme, useTheme } from '../lib/theme'
 import { setLang, t, useLang } from '../i18n'
@@ -14,6 +15,7 @@ const I = {
   modules: <path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z" />,
   notes: <path d="M6 3h9l4 4v14H6zM14 3v5h5M9 12h7M9 16h7" />,
   import: <path d="M12 3v12M7 10l5 5 5-5M4 17v3h16v-3" />,
+  envs: <path d="M4 4h16v6H4zM4 14h16v6H4zM8 7h.01M8 17h.01" />,
 }
 
 function Icon({ name }) {
@@ -39,6 +41,8 @@ export default function Layout() {
   const { data } = useSummary()
   const last = data?.runs.at(-1)
   const pending = pendingZips(useZips().data).length
+  const showEnvs = hasEnvironments(data)
+  const newEnvs = pendingEnvironments(data).length
   const theme = useTheme()
   const lang = useLang()
   return (
@@ -54,6 +58,12 @@ export default function Layout() {
             <Icon name={icon} />{t(label)}
           </NavLink>
         ))}
+        {showEnvs && (
+          <NavLink to={'/entornos' + search} className="nav-link">
+            <Icon name="envs" />{t('Entornos')}
+            {newEnvs > 0 && <span className="badge" title={t('{n} entornos nuevos sin nombre', { n: newEnvs })}>{newEnvs}</span>}
+          </NavLink>
+        )}
         <NavLink to="/importar" className="nav-link">
           <Icon name="import" />{t('Importar')}{pending > 0 && <span className="badge" title={t('{n} zips pendientes', { n: pending })}>{pending}</span>}
         </NavLink>

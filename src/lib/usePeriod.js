@@ -2,6 +2,7 @@ import { useCallback, useMemo } from 'react'
 import { useSearchParams } from 'react-router'
 import { periodRange, previousRange } from './period'
 import { PAGE_PARAM } from './usePagination'
+import { ENV_PARAM } from './environments'
 
 const PERIOD_KEYS = ['p', 'd', 'from', 'to']
 
@@ -35,11 +36,11 @@ export function usePeriod(latestDate) {
   return { period, setPeriod, range, prevRange }
 }
 
-// Parte de la URL que conserva el periodo al navegar entre páginas
+// Parte de la URL que conserva el periodo (y el entorno elegido) al navegar entre páginas
 export function periodSearch(search, extra = {}) {
   const src = new URLSearchParams(search)
   const out = new URLSearchParams()
-  for (const k of PERIOD_KEYS) if (src.has(k)) out.set(k, src.get(k))
+  for (const k of [...PERIOD_KEYS, ENV_PARAM]) if (src.has(k)) out.set(k, src.get(k))
   for (const [k, v] of Object.entries(extra)) if (v != null) out.set(k, v)
   const s = out.toString()
   return s ? `?${s}` : ''

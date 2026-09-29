@@ -110,7 +110,20 @@ fs.writeFileSync(path.join(OUT, 'README.txt'), `playboard-report
 3. Abre ${path.basename(EXE)}: se abre el navegador con la app. Para salir, cierra la ventana del programa.
 
 Opciones: --port <n> para usar otro puerto, --no-open para no abrir el navegador.
-Los datos procesados se guardan en la carpeta ".cache" (se puede borrar sin problema).
+
+Dónde se guardan tus datos
+--------------------------
+- No hay base de datos ni servidor externo: todo son ficheros en esta carpeta y nada sale de tu equipo.
+- El programa (${path.basename(EXE)}) no lleva dentro ningún reporte ni nota: los lee de "reports" y "notes".
+- La primera vez extrae los datos de cada reporte y los guarda en ".cache" para que la app vaya rápida.
+  Después solo lee los reportes nuevos. ".cache" se puede borrar cuando quieras: se vuelve a generar.
+- Los nombres que pongas a los entornos se guardan en "reports/environments.json".
+- La app solo se puede abrir desde este equipo (127.0.0.1).
+
+IMPORTANTE: si quieres pasarle el programa a otra persona, comparte solo ${path.basename(EXE)}
+(al abrirlo crea él solo las carpetas "reports" y "notes").
+Si compartes esta carpeta después de usarla, se irán con ella tus reportes ("reports"), tus notas ("notes")
+y los datos extraídos (".cache"), que pueden contener información sensible (capturas, URLs, datos de prueba).
 
 ---
 
@@ -120,9 +133,29 @@ Los datos procesados se guardan en la carpeta ".cache" (se puede borrar sin prob
 3. Open ${path.basename(EXE)}: the app opens in your browser. To quit, close the program window.
 
 Options: --port <n> to use another port, --no-open to not open the browser.
-Processed data is stored in the ".cache" folder (safe to delete).
+
+Where your data is stored
+-------------------------
+- There is no database or external server: everything is files in this folder and nothing leaves your computer.
+- The program (${path.basename(EXE)}) contains no reports or notes: it reads them from "reports" and "notes".
+- The first time, it extracts the data of each report and stores it in ".cache" so the app stays fast.
+  Afterwards it only reads new reports. ".cache" can be deleted at any time: it is generated again.
+- The names you give to environments are saved in "reports/environments.json".
+- The app can only be opened from this computer (127.0.0.1).
+
+IMPORTANT: to give the program to someone else, share only ${path.basename(EXE)}
+(when opened, it creates the "reports" and "notes" folders by itself).
+If you share this folder after using it, your reports ("reports"), your notes ("notes") and the extracted
+data (".cache") go with it, and they may contain sensitive information (screenshots, URLs, test data).
 `)
 
 const size = (fs.statSync(EXE).size / 1e6).toFixed(0)
 step(`Listo: ${path.relative(ROOT, EXE)} (${size} MB)`)
-console.log(`  Comparte la carpeta ${path.relative(ROOT, OUT)} completa (o comprímela en un zip).`)
+// Si la carpeta ya se ha usado, tiene datos del usuario: se avisa para no compartirla entera
+const hasFiles = (dir) => fs.existsSync(dir) && fs.readdirSync(dir, { recursive: true }).some((f) => fs.statSync(path.join(dir, f)).isFile())
+const used = ['reports', 'notes', '.cache'].filter((d) => hasFiles(path.join(OUT, d)))
+if (used.length) {
+  console.log(`  ⚠ ${used.map((d) => `${d}/`).join(', ')} de ${path.relative(ROOT, OUT)} ${used.length > 1 ? 'tienen' : 'tiene'} datos tuyos: para compartir el programa, comparte solo ${path.basename(EXE)}.`)
+} else {
+  console.log(`  Comparte la carpeta ${path.relative(ROOT, OUT)} completa (o comprímela en un zip), o solo ${path.basename(EXE)}.`)
+}

@@ -29,9 +29,10 @@ function load(url, type) {
 
 export function useResource(url, type = 'json') {
   const entry = useSyncExternalStore(subscribe, () => (url ? cache.get(url) : undefined))
+  // `entry` también es dependencia: si refreshData() borra de la caché un recurso que está en pantalla, se vuelve a pedir
   useEffect(() => {
     if (url && !cache.has(url)) load(url, type)
-  }, [url, type])
+  }, [url, type, entry])
   return entry ?? { status: url ? 'loading' : 'idle' }
 }
 

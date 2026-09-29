@@ -8,6 +8,7 @@ import { dateLocale, getLang, t } from '../i18n'
 import PeriodToolbar from '../components/PeriodToolbar'
 import { ErrorBox, Loading, StatusBar } from '../components/ui'
 import { useReport } from '../lib/useReport'
+import { ENV_PARAM } from '../lib/environments'
 import { successRate, sumStats } from '../lib/stats'
 import { HEALTH_LABEL, STATUS, healthOf } from '../config/status'
 import { fmtDate, fmtPct, plural } from '../lib/format'
@@ -27,12 +28,14 @@ function HealthLegend() {
 }
 
 export default function Calendar() {
-  const { res, summary, period, setPeriod } = useReport()
+  const { res, summary, period, setPeriod, env } = useReport()
+  // Ejecuciones del entorno elegido (todas si no hay filtro)
+  const envRuns = useMemo(() => (summary?.runs ?? []).filter((r) => !env || r.env === env), [summary, env])
   const navigate = useNavigate()
 
   const byDay = useMemo(() => {
     const map = new Map()
-    for (const r of summary?.runs ?? []) {
+    for (const r of envRuns) {
       const d = map.get(r.date) ?? { runs: [] }
       d.runs.push(r)
       map.set(r.date, d)
@@ -43,17 +46,18 @@ export default function Calendar() {
       d.health = healthOf(d.rate)
     }
     return map
-  }, [summary])
+  }, [envRuns])
 
   if (res.status === 'error' && !summary) return <ErrorBox error={res.error} />
   if (!summary) return <Loading />
 
   const anchor = parseISO(period.anchor)
+  const envQuery = env ? `&${ENV_PARAM}=${encodeURIComponent(env)}` : ''
   const openDay = (date) => {
     const day = byDay.get(date)
     if (!day) return
-    if (day.runs.length === 1) navigate(`/ejecucion/${encodeURIComponent(day.runs[0].id)}?p=day&d=${date}`)
-    else navigate(`/ejecuciones?p=day&d=${date}`)
+    if (day.runs.length === 1) navigate(`/ejecucion/${encodeURIComponent(day.runs[0].id)}?p=day&d=${date}${envQuery}`)
+    else navigate(`/ejecuciones?p=day&d=${date}${envQuery}`)
   }
   const dayTitle = (date) => {
     const day = byDay.get(date)
@@ -66,13 +70,13 @@ export default function Calendar() {
   const yEnd = endOfYear(anchor)
   const weeks = []
   for (let w = startOfISOWeek(yStart); w <= yEnd; w = addDays(w, 7)) weeks.push(w)
-  const yearRuns = summary.runs.filter((r) => r.date.startsWith(format(anchor, 'yyyy')))
+  const yearRuns = envRuns.filter((r) => r.date.startsWith(format(anchor, 'yyyy')))
 
   // Calendario mensual
   const mStart = startOfMonth(anchor)
   const mEnd = endOfMonth(anchor)
   const monthDays = eachDayOfInterval({ start: startOfISOWeek(mStart), end: endOfISOWeek(mEnd) })
-  const monthRuns = summary.runs.filter((r) => r.date.startsWith(format(anchor, 'yyyy-MM')))
+  const monthRuns = envRuns.filter((r) => r.date.startsWith(format(anchor, 'yyyy-MM')))
   const today = iso(new Date())
 
   return (

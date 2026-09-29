@@ -49,3 +49,6 @@ src/config/*.local.js
 # Ejecutable (npm run build:exe)
 build/
 release/
+
+# Documentación personal detallada sobre el almacenamiento de datos
+DATA-STORAGE.md

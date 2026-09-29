@@ -8,6 +8,8 @@ import { fmtDate, fmtDuration, fmtPct } from '../lib/format'
 import { periodSearch } from '../lib/usePeriod'
 import { paginate, usePagination } from '../lib/usePagination'
 import { t } from '../i18n'
+import { EnvChip } from '../components/Environments'
+import { hasEnvironments } from '../lib/environments'
 
 export default function Runs() {
   const { res, summary, period, setPeriod, runs } = useReport()
@@ -18,6 +20,7 @@ export default function Runs() {
   if (!summary) return <Loading />
 
   const list = [...runs].reverse()
+  const showEnv = hasEnvironments(summary)
   const page = paginate(list, pager)
   return (
     <div className="page">
@@ -31,7 +34,7 @@ export default function Runs() {
             <table className="table">
               <thead>
                 <tr>
-                  <th>{t('Fecha')}</th><th>{t('Inicio')}</th><th className="num">{t('Duración')}</th><th className="num">{t('Tests')}</th>
+                  <th>{t('Fecha')}</th><th>{t('Inicio')}</th>{showEnv && <th>{t('Entorno')}</th>}<th className="num">{t('Duración')}</th><th className="num">{t('Tests')}</th>
                   <th style={{ width: 180 }}>{t('Resultado')}</th><th className="num">{t('% éxito')}</th>
                   <th className="num">✓</th><th className="num">↻</th><th className="num">✕</th><th className="num">⤼</th>
                   <th>{t('Commit')}</th><th />
@@ -45,6 +48,7 @@ export default function Runs() {
                     <tr key={r.id} className="clickable" onClick={() => navigate(`/ejecucion/${encodeURIComponent(r.id)}${periodSearch(location.search)}`)}>
                       <td className="nowrap">{fmtDate(r.date, 'EEE d MMM yyyy')}</td>
                       <td className="num">{r.time}</td>
+                      {showEnv && <td><EnvChip summary={summary} id={r.env} /></td>}
                       <td className="num">{fmtDuration(r.duration)}</td>
                       <td className="num">{r.stats.total}</td>
                       <td><StatusBar stats={r.stats} /></td>

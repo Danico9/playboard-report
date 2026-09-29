@@ -5,6 +5,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import GithubSlugger from 'github-slugger'
+import { ENV_FILE, applyEnvironments, updateEnvironments } from './environments.mjs'
 import { ingest, importFolder, importZip, listFolders, listZips, CACHE_DIR, NOTES_DIR, REPORTS_DIR, RUNS_DIR, TIME_ZONE } from '../scripts/ingest-reports.mjs'
 
 export { NOTES_DIR, REPORTS_DIR }
@@ -143,7 +144,10 @@ function searchNotes(query) {
 // ─── API ───
 
 export function createApi({ log = console.log } = {}) {
+  // summaryData: resultado de la ingesta; summaryCache: el JSON que se sirve, con los entornos aplicados
+  let summaryData = null
   let summaryCache = null
+  let envWrittenAt = 0
   let running = false
   let lastEnd = 0
   let timer = null
@@ -158,7 +162,8 @@ export function createApi({ log = console.log } = {}) {
     if (running) return
     running = true
     try {
-      summaryCache = JSON.stringify(ingest({ log }))
+      summaryData = ingest({ log })
+      summaryCache = null
     } catch (e) {
       log(`[ingest] Error: ${e.stack ?? e.message}`)
     } finally {
@@ -167,9 +172,22 @@ export function createApi({ log = console.log } = {}) {
     }
   }
 
+  const summaryJson = () => {
+    if (!summaryData) return null
+    summaryCache ??= JSON.stringify(applyEnvironments(summaryData))
+    return summaryCache
+  }
+
   // Recibe los cambios de ficheros (watcher de Vite o fs.watch) con rutas absolutas
   const handleFsEvent = (event, file) => {
     const abs = path.resolve(file)
+    if (abs === ENV_FILE || abs === `${ENV_FILE}.tmp`) {
+      // Editado a mano (los cambios de la propia app ya se avisan al guardar)
+      if (Date.now() - envWrittenAt < 2000) return
+      summaryCache = null
+      notify('playboard:data')
+      return
+    }
     if (abs.startsWith(NOTES_DIR + path.sep) && abs.endsWith('.md')) {
       notify('playboard:notes')
       return
@@ -209,8 +227,8 @@ export function createApi({ log = console.log } = {}) {
         return
       }
       if (p === '/api/summary') {
-        if (!summaryCache) await runIngest()
-        return sendJson(res, summaryCache ?? '{"runs":[],"tests":{},"results":{},"signatures":[]}')
+        if (!summaryData) await runIngest()
+        return sendJson(res, summaryJson() ?? '{"runs":[],"tests":{},"results":{},"signatures":[],"environments":[]}')
       }
       if (p.startsWith('/api/runs/')) {
         const id = decodeURIComponent(p.slice('/api/runs/'.length))
@@ -222,12 +240,24 @@ export function createApi({ log = console.log } = {}) {
       if (p === '/api/info') return sendJson(res, { timeZone: TIME_ZONE, reportsDir: REPORTS_DIR, runsDir: RUNS_DIR, notesDir: NOTES_DIR })
       // Elementos importables: zips y carpetas sueltas de reports/
       if (p === '/api/zips' && req.method === 'GET') return sendJson(res, [...listZips(), ...listFolders()])
-      if (p === '/api/zips/import') {
-        // La cabecera propia obliga a que la petición venga de la propia app (evita envíos desde otras webs)
-        if (req.method !== 'POST' || req.headers['x-playboard'] !== '1') {
-          res.statusCode = 403
-          return res.end('Petición no permitida')
+      // La cabecera propia obliga a que las acciones que modifican datos vengan de la propia app (evita envíos desde otras webs)
+      if ((p === '/api/zips/import' || p === '/api/environments') && (req.method !== 'POST' || req.headers['x-playboard'] !== '1')) {
+        res.statusCode = 403
+        return res.end('Petición no permitida')
+      }
+      if (p === '/api/environments') {
+        try {
+          updateEnvironments(await readJsonBody(req))
+        } catch (e) {
+          res.statusCode = 400
+          return res.end(String(e.message))
         }
+        envWrittenAt = Date.now()
+        summaryCache = null
+        notify('playboard:data')
+        return sendJson(res, { ok: true })
+      }
+      if (p === '/api/zips/import') {
         const { items = [] } = await readJsonBody(req)
         const results = []
         for (const { kind, name } of items) {

@@ -172,8 +172,8 @@ function runDates() {
     const dow = d.getUTCDay()
     if (dow === 0 || dow === 6) continue
     out.push(new Date(d.getTime() + 2 * 3600e3 + Math.floor(between(0, 240)) * 1000))
-    // Alguna ejecución manual a mediodía
-    if (rand() < 0.08) out.push(new Date(d.getTime() + 11 * 3600e3 + Math.floor(between(0, 3000)) * 1000))
+    // Alguna ejecución manual a mediodía (en el entorno de QA: ver hostOf)
+    if (rand() < 0.08 || out.length % 11 === 5) out.push(new Date(d.getTime() + 11 * 3600e3 + Math.floor(between(0, 3000)) * 1000))
   }
   return out
 }
@@ -184,8 +184,13 @@ const COMMITS = [
   'Nuevos tests de valoraciones de producto', 'Corrige datos de prueba de direcciones', 'Actualiza Playwright', 'Mejora logs de los flujos de pago',
 ]
 
+// Entornos de la demo: las ejecuciones nocturnas van contra staging y las manuales de mediodía contra QA.
+// La app lo detecta por el dominio de las URLs de las salidas (ver «Entornos»).
+const hostOf = (start) => (start.getUTCHours() >= 11 ? 'qa.tienda-demo.example.com' : 'staging.tienda-demo.example.com')
+
 function buildRun(start, runIndex) {
   const day = start.toISOString().slice(0, 10)
+  const host = hostOf(start)
   const id = `${start.toISOString().slice(0, 19).replace('T', '_').replace(/:/g, '-')}_all-tests`
   const dir = path.join(RUNS_DIR, id)
   const dataDir = path.join(dir, 'data')
@@ -221,7 +226,7 @@ function buildRun(start, runIndex) {
             fs.writeFileSync(path.join(dir, ctx), ERROR_CONTEXT(spec.describe))
             attachments.push({ name: 'error-context', contentType: 'text/markdown', path: ctx })
           }
-          attachments.push({ name: 'stdout', contentType: 'text/plain', body: `Iniciando «${title}»…\nUsuario de prueba: demo+${runIndex}@example.com\n${error ? 'Fallo detectado, guardando captura.\n' : 'Completado.\n'}` })
+          attachments.push({ name: 'stdout', contentType: 'text/plain', body: `Iniciando «${title}» en https://${host}/…\nUsuario de prueba: demo+${runIndex}@example.com\n${error ? 'Fallo detectado, guardando captura.\n' : 'Completado.\n'}` })
           const r = {
             duration, startTime: new Date(clock).toISOString(), retry, workerIndex: runIndex % 4,
             status, errors: error ? [{ message: error }] : [], annotations: [], attachments, steps: [],
@@ -459,6 +464,14 @@ export function generateDemo({ log = console.log } = {}) {
     fs.writeFileSync(path.join(DEMO_DIR, 'reports', `artifacts (${101 + i}).zip`), zipSync(entries))
     fs.rmSync(dir, { recursive: true })
   })
+  // El entorno de staging ya tiene nombre; el de QA aparece como entorno nuevo pendiente de nombrar
+  fs.writeFileSync(path.join(DEMO_DIR, 'reports', 'environments.json'), JSON.stringify({
+    version: 1,
+    environments: [{ id: 'staging', name: 'Staging' }],
+    signals: { 'host:staging.tienda-demo.example.com': 'staging' },
+    runs: {},
+    dismissed: [],
+  }, null, 2))
   for (const [rel, content] of Object.entries(NOTES)) {
     const p = path.join(DEMO_DIR, 'notes', rel)
     fs.mkdirSync(path.dirname(p), { recursive: true })

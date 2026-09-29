@@ -21,9 +21,18 @@ export function sumStats(list) {
   return out
 }
 
-export function runsInRange(summary, range) {
+export function runsInRange(summary, range, env) {
   if (!range) return []
-  return summary.runs.map((r, i) => ({ ...r, index: i })).filter((r) => inRange(r.date, range))
+  return summary.runs.map((r, i) => ({ ...r, index: i })).filter((r) => inRange(r.date, range) && (!env || r.env === env))
+}
+
+// Ejecución anterior (o siguiente) del mismo entorno: comparar con la de otro entorno daría fallos «nuevos» que no lo son
+export function adjacentRunIndex(summary, runIndex, dir) {
+  const env = summary.runs[runIndex]?.env
+  for (let i = runIndex + dir; i >= 0 && i < summary.runs.length; i += dir) {
+    if (env == null || summary.runs[i].env === env) return i
+  }
+  return -1
 }
 
 // Tests eliminados (borrados, renombrados o excluidos): no aparecen en las últimas REMOVED_AFTER_RUNS ejecuciones
@@ -92,16 +101,16 @@ export function testRows(summary, runIndexes) {
   return rows
 }
 
-// Diferencias entre una ejecución y la anterior: fallos nuevos, arreglados y tests nuevos
+// Diferencias entre una ejecución y la anterior de su entorno: fallos nuevos, arreglados y tests nuevos
 export function compareRuns(summary, runIndex) {
-  const prev = runIndex - 1
+  const prev = adjacentRunIndex(summary, runIndex, -1)
   const out = { newFailures: [], fixed: [], newTests: [] }
   if (runIndex < 0) return out
   for (const [key, entries] of Object.entries(summary.results)) {
     const cur = entries.find((e) => e[0] === runIndex)
     if (!cur) continue
     const before = entries.find((e) => e[0] === prev)
-    if (entries[0][0] === runIndex && runIndex > 0) out.newTests.push({ key, outcome: cur[1] })
+    if (entries[0][0] === runIndex && prev >= 0) out.newTests.push({ key, outcome: cur[1] })
     if (!before) continue
     const ok = (o) => o === 'passed' || o === 'flaky'
     if (cur[1] === 'failed' && ok(before[1])) out.newFailures.push({ key, sig: cur[3] })

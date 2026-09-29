@@ -50,6 +50,25 @@ Mapeo de estados: `expected` → pasado, `unexpected` → fallido, `flaky` → f
 - **Carpetas sueltas.** `listFolders()` busca, en cada carpeta de `reports/` (salvo `playwright-reports/`), subcarpetas con `index.html` hasta 4 niveles, sin entrar en `data/` ni `trace/`. `importFolder()` valida cada reporte y lo mueve a `playwright-reports/<id>` con `moveDir()` (reintenta si Windows bloquea la carpeta y, si no puede, copia y borra). Los duplicados se borran y después solo se eliminan las carpetas que han quedado vacías: cualquier otro fichero del usuario se conserva.
 - `GET /api/zips` devuelve zips y carpetas (`kind: 'zip' | 'folder'`), y `POST /api/zips/import` recibe `{ items: [{ kind, name }] }`.
 
+## Entornos (`server/environments.mjs`)
+
+- **Detección (ingesta).** Cada ejecución lleva `run.signal = { key, source, value, hosts }`. La clave sale, por este orden, de `metadata.environment`/`metadata.env` (`meta:<valor>`), `metadata.baseURL` (`host:<dominio>`), el dominio más frecuente en las URLs de los detalles de cada spec, con los pasos incluidos (`host:<dominio>`; sin los dominios del CI ni los de documentación como `playwright.dev`), y la rama del CI (`branch:<rama>`). Sin nada de eso, `key` es `null`. `countHosts()` se calcula al leer el HTML (antes de quitar los `steps`) y se guarda en `runs/<id>.raw.json`.
+- **Decisiones del usuario.** Se guardan en `reports/environments.json`, el único fichero que escribe la interfaz. Está en `reports/` y no en `.cache/` para que no se pierda al regenerar la caché y para que acompañe a los reportes (también junto al ejecutable):
+
+  ```json
+  {
+    "version": 1,
+    "environments": [{ "id": "pre", "name": "Preproducción" }],
+    "signals": { "host:pre.example.com": "pre", "branch:release": "pre" },
+    "runs": { "<runId>": "pre" },
+    "dismissed": ["host:otro.example.com"]
+  }
+  ```
+
+  Varias señales con el mismo entorno = entornos fusionados. `runs` son las asignaciones a mano (tienen prioridad). `dismissed` son las señales que el usuario ha dejado sin nombre, para no volver a preguntar.
+- **Resolución (API).** `applyEnvironments()` se aplica al servir `/api/summary` (no en la ingesta: cambiar un nombre no obliga a reprocesar nada). Añade `run.env` (id del entorno con nombre, la propia señal si no lo tiene o `_none`) y `run.envManual`, y `summary.environments` con sus señales, número de ejecuciones, fechas y `pending` (sin nombre y sin descartar, solo si hay más de un entorno).
+- **Cliente.** El filtro va en la URL (`?env=`) y lo aplica `useReport()`. `compareRuns()` y «Anterior/Siguiente» usan la ejecución adyacente del mismo entorno (`adjacentRunIndex()` en `lib/stats.js`).
+
 ## Módulos
 
 El módulo que se muestra lo decide el cliente (`moduleOfTest` en `src/config/modules.js`), por este orden: tag `@module:<id>` del test, reglas `MODULE_RULES` de `modules.local.js` (por tag o por ruta), módulo automático de la ingesta y, al final, `general`. Después se aplican los alias (`MODULE_ALIASES`) y los nombres legibles (`MODULES`).
@@ -58,7 +77,8 @@ El módulo que se muestra lo decide el cliente (`moduleOfTest` en `src/config/mo
 
 | Ruta | Respuesta |
 |---|---|
-| `GET /api/summary` | `summary.json` |
+| `GET /api/summary` | `summary.json` con los entornos aplicados (`run.env`, `environments`) |
+| `POST /api/environments` | `{ action, … }`: `name` (`key`, `name`), `merge` (`key`, `env`), `dismiss`/`undismiss`/`unlink` (`key`), `rename` (`env`, `name`; si el nombre ya existe, fusiona), `delete` (`env`) y `assignRun` (`run`, `env` o `null`). Exige la cabecera `x-playboard: 1` |
 | `GET /api/runs/:id` | Detalle de una ejecución |
 | `GET /api/info` | Zona horaria y rutas de las carpetas |
 | `GET /api/zips` | Zips de `reports/` y su estado |
@@ -104,7 +124,7 @@ Configuración local (`src/config/*.local.js`):
 
 ## Datos de demostración
 
-`scripts/generate-demo.mjs` crea en `.demo/` unas 40 ejecuciones de una tienda online ficticia con el formato real de Playwright (zip embebido, capturas PNG y error-context), dos zips y una carpeta suelta pendientes de importar, un spec clasificado con el tag `@module:catalog` y notas de ejemplo. Los datos son deterministas (semilla fija). `scripts/demo.mjs` los genera si faltan y arranca Vite con `PLAYBOARD_DATA_DIR=.demo` en el puerto 5174.
+`scripts/generate-demo.mjs` crea en `.demo/` unas 40 ejecuciones de una tienda online ficticia con el formato real de Playwright (zip embebido, capturas PNG y error-context), dos zips y una carpeta suelta pendientes de importar, un spec clasificado con el tag `@module:catalog`, dos entornos (las ejecuciones nocturnas contra `staging.…`, ya con nombre en `reports/environments.json`, y las de mediodía contra `qa.…`, pendiente de nombrar) y notas de ejemplo. Los datos son deterministas (semilla fija). `scripts/demo.mjs` los genera si faltan y arranca Vite con `PLAYBOARD_DATA_DIR=.demo` en el puerto 5174.
 
 ## Idiomas (`src/i18n/`)
 
@@ -120,6 +140,7 @@ Configuración local (`src/config/*.local.js`):
 - `lib/usePeriod.js` y `lib/period.js`: el periodo (`?p=week&d=2026-09-22`, `?p=range&from=…&to=…`) vive en la URL.
   Los filtros de cada pantalla también, junto al periodo, con `lib/useUrlFilters.js`: el índice de Tests (`?q=…&s=failed&mod=…&proj=…`)
   y la pestaña «Tests por módulo» de Módulos (`?tab=tests&f=…&view=module|file|list&sort=…`). `DateRangeFilter` (en `PeriodToolbar.jsx`) cambia el periodo a «Rango».
+- `lib/environments.js`: filtro de entorno (`?env=`, que `periodSearch()` conserva al navegar), nombres para mostrar y `saveEnvironments()` (`POST /api/environments`). La pantalla es `pages/Environments.jsx` y los componentes comunes (selector, etiqueta, formulario de nombre) están en `components/Environments.jsx`.
 - `lib/usePagination.js`: paginación de listas largas. La página va en la URL como `?pg=` (`p` es el tipo de periodo) y se quita al cambiar un filtro
   (`useUrlFilters`) o el periodo; el tamaño de página se guarda en `localStorage` (`playboard-page-size`). `paginate()` corta la lista y `<Pagination>` (en `components/ui.jsx`) pinta los controles.
   En las listas agrupadas (árbol de Tests, tablas por módulo o fichero, detalle de ejecución) se paginan los tests y la cabecera del grupo se repite al principio de cada página; un grupo plegado ocupa un solo hueco.

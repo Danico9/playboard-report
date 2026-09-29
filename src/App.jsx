@@ -10,6 +10,7 @@ import Errors from './pages/Errors'
 import Modules from './pages/Modules'
 import Notes from './pages/Notes'
 import Import from './pages/Import'
+import Environments from './pages/Environments'
 import { Empty } from './components/ui'
 import { t, useLang } from './i18n'
 
@@ -29,6 +30,7 @@ export default function App() {
           <Route path="errores" element={<Errors />} />
           <Route path="modulos" element={<Modules />} />
           <Route path="notas/*" element={<Notes />} />
+          <Route path="entornos" element={<Environments />} />
           <Route path="importar" element={<Import />} />
           <Route path="*" element={<Empty>{t('Página no encontrada.')}</Empty>} />
         </Route>

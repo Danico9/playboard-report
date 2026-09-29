@@ -19,8 +19,8 @@ El reporte HTML de Playwright es muy completo, pero solo muestra una ejecución.
 | **Calendario** | **Errores** agrupados |
 | ![Importar zips de artefactos](docs/screenshots/import-dark.png) | ![Visor de notas](docs/screenshots/notes-dark.png) |
 | **Importar** zips del CI | **Notas** en Markdown |
-| ![Módulos con uno desplegado](docs/screenshots/modules-dark.png) | |
-| **Módulos**: salud de cada área y todos sus tests | |
+| ![Módulos con uno desplegado](docs/screenshots/modules-dark.png) | ![Entornos detectados, con uno nuevo por nombrar](docs/screenshots/environments-dark.png) |
+| **Módulos**: salud de cada área y todos sus tests | **Entornos**: ponles nombre o fusiónalos |
 | ![Resumen en modo claro](docs/screenshots/overview-light.png) | ![Resumen con la interfaz en inglés](docs/screenshots/overview-dark-en.png) |
 | **Modo claro** | **Interfaz en inglés** |
 
@@ -34,6 +34,10 @@ El reporte HTML de Playwright es muy completo, pero solo muestra una ejecución.
   - Listas de fallos nuevos, tests arreglados y tests nuevos.
   - Rankings: los que más fallan, los más flaky y los más lentos.
 - **Selector de periodo común a todas las pantallas:** Todo, Año, Mes, Semana, Día o un Rango de fechas. El periodo va en la URL, así que puedes guardar o compartir la vista.
+- **Entornos:** si tus tests se ejecutan en varios entornos (p. ej. preproducción y test), la app los detecta y te avisa del nuevo. Puedes ponerle el nombre que quieras, fusionarlo con un entorno que ya exista o dejarlo sin nombre.
+  - Se detecta, por este orden, por `metadata.environment` o `metadata.baseURL` del `playwright.config` (lo más fiable), el dominio más frecuente en las URLs del reporte (errores, salidas y pasos) o la rama del CI. Las ejecuciones sin nada de esto salen como «Sin detectar».
+  - Todas las pantallas se pueden filtrar por entorno (el selector aparece junto al periodo), y los fallos nuevos y arreglados se calculan contra la ejecución anterior **del mismo entorno**.
+  - Desde el detalle de una ejecución puedes cambiar su entorno a mano. Los nombres, las fusiones y las asignaciones se guardan en `reports/environments.json`.
 - **Calendario:** heatmap anual y calendario mensual, con cada día coloreado según su % de éxito.
 - **Detalle de ejecución:** desglose por módulo y lista de tests con filtros y agrupación. Cada test abre un panel con:
   - el error con sus colores, las capturas, el vídeo (con controles para adelantar y atrasar), el contexto del error y el stdout;
@@ -176,7 +180,42 @@ Cada barra enlaza con su apartado de la nota. Los apartados sin números ni caso
 
 ## Tus datos no se comparten
 
-Todo lo que hay dentro de `reports/` y `notes/` está en el `.gitignore`. Solo se versiona un `.gitkeep` para que las carpetas existan al clonar. Cada persona pone ahí sus propios reportes y notas.
+Tus reportes y tus notas **solo existen en tu equipo**. No hay base de datos, servidor externo ni cuenta: todo son ficheros en tus carpetas.
+
+### Dónde se guarda cada cosa
+
+| Qué | Dónde | ¿Va al repositorio? |
+|---|---|---|
+| Tus reportes y los zips pendientes de importar | `reports/` | No (`.gitignore`) |
+| Tus notas (la app solo las lee, nunca las modifica) | `notes/` | No (`.gitignore`) |
+| Nombres de los entornos, fusiones y asignaciones a mano | `reports/environments.json` (el único fichero que se escribe desde la interfaz) | No (`.gitignore`) |
+| Datos procesados de los reportes | `.cache/` | No (`.gitignore`) |
+| Tu configuración (nombres de módulos, categorías de notas) | `src/config/*.local.js` | No (`.gitignore`) |
+| Idioma, tema y tamaño de página | `localStorage` de tu navegador | No |
+
+Del repositorio solo se versiona un `.gitkeep` en `reports/` y `notes/`, para que las carpetas existan al clonar. Cada persona pone ahí sus propios reportes y notas.
+
+### Cómo se procesan los reportes (la caché)
+
+Leer un `index.html` de Playwright es lento: lleva todos los resultados comprimidos dentro y puede ocupar varios MB. Por eso la app lo hace **una sola vez por reporte**:
+
+1. Al arrancar (o al llegar un reporte nuevo) extrae los datos de cada `index.html` y guarda en `.cache/data/` un resumen de todo el histórico y el detalle de cada ejecución.
+2. En los arranques siguientes solo lee los reportes nuevos o modificados. Los demás se cargan desde `.cache/`, que es mucho más rápido.
+3. Mientras la usas, el resumen está en memoria: cambiar de pantalla o de periodo no vuelve a leer ningún fichero. Las capturas, vídeos y trazas no se copian: se abren directamente desde `reports/`.
+4. Si borras un reporte, sus datos desaparecen de `.cache/` en la siguiente lectura.
+
+`.cache/` se puede borrar cuando quieras: se vuelve a generar desde `reports/` (tarda un poco más la primera vez). Contiene lo mismo que tus reportes, así que trátala igual que a ellos.
+
+### El ejecutable tampoco lleva tus datos
+
+El `.exe` solo contiene la aplicación. Tus reportes, tus notas y la caché se leen y se escriben en las carpetas `reports/`, `notes/` y `.cache/` que hay **junto a él**, nunca dentro. Aun así:
+
+- **Para compartir el programa, comparte solo el `.exe`** (o una carpeta recién generada). Si compartes la carpeta en la que ya lo has usado, se van con ella tus reportes, tus notas y la caché.
+- `npm run build:exe` incluye tu configuración local (nombres de módulos y categorías de notas). Para dárselo a otra persona, genera la versión genérica con `npm run build:exe -- --no-local-config` (ver [Ejecutable](#ejecutable-sin-instalar-nada)).
+
+### Uso local
+
+La app solo acepta conexiones desde tu propio equipo (`127.0.0.1` / `localhost`): nadie puede abrirla desde otro ordenador de la red.
 
 ⚠️ Los reportes de Playwright pueden contener datos sensibles: capturas de pantalla, stdout, URLs internas o datos de prueba. La app está pensada para **uso local**, así que no la publiques en un servidor accesible desde fuera.
 

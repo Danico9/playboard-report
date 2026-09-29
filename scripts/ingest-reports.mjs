@@ -17,7 +17,7 @@ export const REPORTS_DIR = path.join(DATA_ROOT, 'reports')
 export const NOTES_DIR = path.join(DATA_ROOT, 'notes')
 export const RUNS_DIR = path.join(REPORTS_DIR, 'playwright-reports')
 export const CACHE_DIR = path.join(ROOT, '.cache', DATA_ROOT === ROOT ? 'data' : `data-${path.basename(DATA_ROOT).replace(/^\./, '')}`)
-const SCHEMA_VERSION = 7
+const SCHEMA_VERSION = 8
 // Zona horaria para decidir a qué día pertenece cada ejecución: PLAYBOARD_TZ o, si no, la del sistema
 export const TIME_ZONE = process.env.PLAYBOARD_TZ || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
 const MAX_TEXT = 20000
@@ -374,9 +374,50 @@ function errorSignature(message) {
   return { key, title, location }
 }
 
+// ─── Entorno de la ejecución ───
+// Un reporte no dice en qué entorno se ejecutó, así que se deduce una «señal» (clave) con, por orden de preferencia:
+//   1. metadata.environment / metadata.env / metadata.baseURL del playwright.config (lo más fiable);
+//   2. el dominio más frecuente en las URLs de errores, salidas y pasos (sin los del CI ni los de documentación);
+//   3. la rama del CI.
+// Qué nombre tiene cada señal y qué señales forman un mismo entorno lo decide el usuario (server/environments.mjs).
+
+const URL_HOST_RE = /https?:\/\/([a-z0-9][a-z0-9.-]*[a-z0-9])(?::(\d+))?/gi
+const NOISE_HOSTS = new Set(['playwright.dev', 'github.com', 'aka.ms', 'nodejs.org', 'www.w3.org', 'developer.mozilla.org', 'npmjs.com', 'www.npmjs.com'])
+
+const hostOf = (url) => {
+  try { return new URL(url).host.toLowerCase() } catch { return null }
+}
+
+// Cuenta los dominios de las URLs de los detalles de cada spec (con los pasos, antes de quitarlos)
+export function countHosts(report, fileDetail) {
+  const meta = report.metadata ?? {}
+  const ignore = new Set([meta.ci?.buildHref, meta.ci?.commitHref].map(hostOf).filter(Boolean))
+  const counts = {}
+  for (const f of report.files) {
+    const detail = fileDetail(f.fileId)
+    if (!detail) continue
+    for (const m of JSON.stringify(detail).matchAll(URL_HOST_RE)) {
+      const host = (m[2] ? `${m[1]}:${m[2]}` : m[1]).toLowerCase()
+      if (!ignore.has(host) && !NOISE_HOSTS.has(host)) counts[host] = (counts[host] ?? 0) + 1
+    }
+  }
+  return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 5)
+}
+
+function detectEnvironment(meta, hosts) {
+  const declared = meta.environment ?? meta.env
+  if (typeof declared === 'string' && declared.trim()) return { key: `meta:${declared.trim()}`, source: 'metadata', value: declared.trim() }
+  const baseHost = typeof meta.baseURL === 'string' ? hostOf(meta.baseURL) : null
+  if (baseHost) return { key: `host:${baseHost}`, source: 'baseURL', value: baseHost }
+  if (hosts.length) return { key: `host:${hosts[0][0]}`, source: 'host', value: hosts[0][0] }
+  const branch = meta.ci?.branch ?? meta.gitCommit?.branch
+  if (branch) return { key: `branch:${branch}`, source: 'branch', value: branch }
+  return { key: null, source: null, value: null }
+}
+
 const OUTCOME = { expected: 'passed', unexpected: 'failed', flaky: 'flaky', skipped: 'skipped' }
 
-function normalizeRun(runId, report, fileDetail, signatures) {
+function normalizeRun(runId, report, fileDetail, signatures, hosts) {
   const start = report.startTime
   const { date, time } = localDateTime(start)
   const meta = report.metadata ?? {}
@@ -399,6 +440,7 @@ function normalizeRun(runId, report, fileDetail, signatures) {
     workers: meta.actualWorkers ?? null,
     branch: meta.ci?.branch ?? git.branch ?? null,
     buildHref: meta.ci?.buildHref ?? null,
+    signal: { ...detectEnvironment(meta, hosts), hosts },
     commit: git.hash
       ? {
           short: git.shortHash, hash: git.hash, subject: git.subject,
@@ -504,17 +546,18 @@ export function ingest({ log = console.log } = {}) {
     let data
     const raw = oldRuns[runId] === stamp ? readJson(path.join(CACHE_DIR, 'runs', `${runId}.raw.json`), null) : null
     if (raw) {
-      data = normalizeRun(runId, raw.report, (id) => raw.details[id] ?? null, signatures)
+      data = normalizeRun(runId, raw.report, (id) => raw.details[id] ?? null, signatures, raw.hosts ?? [])
     } else {
       try {
         const { report, fileDetail } = readEmbeddedReport(indexPath)
         const details = {}
+        const hosts = countHosts(report, fileDetail)
         for (const f of report.files) {
           const d = fileDetail(f.fileId)
           if (d) details[f.fileId] = stripSteps(d)
         }
-        fs.writeFileSync(path.join(CACHE_DIR, 'runs', `${runId}.raw.json`), JSON.stringify({ report, details }))
-        data = normalizeRun(runId, report, (id) => details[id] ?? null, signatures)
+        fs.writeFileSync(path.join(CACHE_DIR, 'runs', `${runId}.raw.json`), JSON.stringify({ report, details, hosts }))
+        data = normalizeRun(runId, report, (id) => details[id] ?? null, signatures, hosts)
         parsed++
       } catch (e) {
         log(`[ingest] Error leyendo ${runId}: ${e.message}`)

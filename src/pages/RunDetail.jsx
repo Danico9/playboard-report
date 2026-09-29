@@ -5,7 +5,8 @@ import { Empty, ErrorBox, Kpi, Loading, ModuleTag, Pagination, StatusBar, Status
 import { STATUS, STATUS_ORDER } from '../config/status'
 import { moduleName, moduleOfTest } from '../config/modules'
 import { fmtDate, fmtDuration, fmtNum, fmtPct, plural } from '../lib/format'
-import { successRate } from '../lib/stats'
+import { adjacentRunIndex, successRate } from '../lib/stats'
+import { RunEnvironment } from '../components/Environments'
 import { useKnownIssues, useRunDetail, useSummary, issuesForTest } from '../lib/store'
 import { periodSearch } from '../lib/usePeriod'
 import { paginate, usePagination } from '../lib/usePagination'
@@ -89,8 +90,9 @@ export default function RunDetail() {
 
   const run = detail.run
   const runIndex = summary?.runs.findIndex((r) => r.id === run.id) ?? -1
-  const prev = runIndex > 0 ? summary.runs[runIndex - 1] : null
-  const next = runIndex >= 0 ? summary.runs[runIndex + 1] : null
+  // Anterior y siguiente dentro del mismo entorno
+  const prev = runIndex >= 0 ? summary.runs[adjacentRunIndex(summary, runIndex, -1)] ?? null : null
+  const next = runIndex >= 0 ? summary.runs[adjacentRunIndex(summary, runIndex, 1)] ?? null : null
   const selected = params.get('t') ? tests.find((x) => x.testId === params.get('t')) : null
   const counts = Object.fromEntries(STATUS_ORDER.map((k) => [k, tests.filter((x) => x.outcome === k).length]))
   const toggle = (k) => setStatuses((s) => {
@@ -113,6 +115,7 @@ export default function RunDetail() {
             {fmtDuration(run.duration)} · {run.workers ?? '?'} {t('workers')} · {run.projects.join(', ')}
             {run.branch && <> · {t('rama')} <span className="mono">{run.branch}</span></>}
           </p>
+          {runIndex >= 0 && <p className="small"><RunEnvironment summary={summary} run={summary.runs[runIndex]} /></p>}
           {run.commit && (
             <p className="small">
               {t('Commit')} {run.commit.href ? <a href={run.commit.href} target="_blank" rel="noreferrer" className="mono">{run.commit.short}</a> : <span className="mono">{run.commit.short}</span>}

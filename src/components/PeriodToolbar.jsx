@@ -2,6 +2,7 @@ import { addDays, format, parseISO } from 'date-fns'
 import { PERIOD_TYPES, periodLabel, periodRange, shiftPeriod } from '../lib/period'
 import { plural } from '../lib/format'
 import { t } from '../i18n'
+import { EnvironmentFilter } from './Environments'
 
 export default function PeriodToolbar({ period, setPeriod, latestDate, runCount, children }) {
   const navigable = !['all', 'range'].includes(period.type)
@@ -37,6 +38,7 @@ export default function PeriodToolbar({ period, setPeriod, latestDate, runCount,
       )}
       {period.type === 'all' && <span className="period-label" style={{ textAlign: 'left' }}>{periodLabel(period)}</span>}
       <span className="spacer" />
+      <EnvironmentFilter />
       {children}
       {runCount != null && <span className="muted small">{t('{runs} en el periodo', { runs: plural(runCount, 'ejecución', 'ejecuciones') })}</span>}
     </div>

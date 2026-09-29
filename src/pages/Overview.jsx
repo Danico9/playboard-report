@@ -11,6 +11,7 @@ import { chartBuckets, compareRuns, successRate, sumStats, testRows } from '../l
 import { fmtDate, fmtDuration, fmtNum, fmtPct, fmtSigned, plural } from '../lib/format'
 import { PREVIOUS_LABEL } from '../lib/period'
 import { periodSearch } from '../lib/usePeriod'
+import { envLabel, pendingEnvironments } from '../lib/environments'
 
 function delta(cur, prev, { unit = '', higherIsGood = true, scale = 1, label }) {
   if (cur == null || prev == null) return null
@@ -45,6 +46,7 @@ export default function Overview() {
   const navigate = useNavigate()
   const location = useLocation()
   const pending = pendingZips(useZips().data).length
+  const newEnvs = pendingEnvironments(summary)
 
   const data = useMemo(() => {
     if (!summary || !runs.length) return null
@@ -97,6 +99,15 @@ export default function Overview() {
         <div className="banner">
           <span>{t('Hay {n} zip(s) o carpetas de reportes en reports/ sin importar.', { n: pending })}</span>
           <Link className="btn primary" to="/importar">{t('Ir a Importar')}</Link>
+        </div>
+      )}
+      {newEnvs.length > 0 && (
+        <div className="banner">
+          <span>
+            {t('Se han ejecutado tests en {n} entorno(s) nuevo(s):', { n: newEnvs.length })} <b className="mono">{newEnvs.map(envLabel).join(', ')}</b>.
+            {' '}{t('Puedes ponerles nombre o fusionarlos con uno que ya exista.')}
+          </span>
+          <Link className="btn primary" to={`/entornos${periodSearch(location.search)}`}>{t('Ir a Entornos')}</Link>
         </div>
       )}
       <div className="page-head">

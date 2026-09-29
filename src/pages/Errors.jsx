@@ -63,7 +63,7 @@ function StateBadges({ row, showNew }) {
 }
 
 export default function Errors() {
-  const { res, summary, period, setPeriod, runs: periodRuns, runIndexes: periodIndexes } = useReport()
+  const { res, summary, period, setPeriod, runs: periodRuns, runIndexes: periodIndexes, env } = useReport()
   const { get, set } = useUrlFilters(DEFAULTS)
   const tab = get('tab') === 'all' ? 'all' : 'period'
   const global = tab === 'all'
@@ -73,7 +73,7 @@ export default function Errors() {
   const [open, setOpen] = useState(null)
   const pager = usePagination()
 
-  const allRuns = useMemo(() => (summary ? summary.runs.map((r, index) => ({ ...r, index })) : []), [summary])
+  const allRuns = useMemo(() => (summary ? summary.runs.map((r, index) => ({ ...r, index })).filter((r) => !env || r.env === env) : []), [summary, env])
   const runs = global ? allRuns : periodRuns
   const runIndexes = useMemo(() => (global ? allRuns.map((r) => r.index) : periodIndexes), [global, allRuns, periodIndexes])
 

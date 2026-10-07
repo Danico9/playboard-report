@@ -398,6 +398,10 @@ details.fold[open] > summary { margin-bottom: 8px; }
 .tree-describe + .tree-test { border-top: 0; }
 .tree-test:hover { background: var(--hover); }
 .tree-test:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.tree-test.context, .table tr.context { opacity: .55; }
+.tree-test.context:hover, .tree-test.context:focus-visible, .table tr.context:hover { opacity: 1; }
+.filter-check { gap: 6px; cursor: pointer; font-size: 13px; color: var(--text-2); }
+.filter-check input { accent-color: var(--accent); width: 15px; height: 15px; }
 .tree-status { font-weight: 700; text-align: center; }
 .tree-status.inline { display: inline; }
 .tree-test-main { min-width: 0; }
@@ -423,3 +427,85 @@ details.fold[open] > summary { margin-bottom: 8px; }
 .env-details[open] > summary { margin-bottom: 8px; }
 .btn.link { background: none; border-color: transparent; color: var(--accent); padding: 0 4px; }
 .btn.link:hover { text-decoration: underline; }
+
+/* Revisiones personales («Comprobado: OK»): color de acento para no confundirlas con el estado real del test.
+   «Sigue fallando» va en rojo (con ✕ y texto), para no confundirla con la marca de OK. */
+.review-toggle {
+  display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 999px; cursor: pointer;
+  border: 1px dashed var(--border-strong); background: transparent; color: var(--muted); font-size: 12px;
+}
+.review-toggle:hover { border-style: solid; border-color: var(--accent); color: var(--info-text); }
+.review-chip {
+  display: inline-flex; align-items: center; gap: 5px; padding: 1px 8px; border-radius: 999px; cursor: pointer;
+  font-size: 12px; font-weight: 600; white-space: nowrap;
+  background: var(--accent-soft); color: var(--info-text); border: 1px solid var(--accent-border);
+}
+.review-chip.static { cursor: default; }
+.review-chip:not(.static):hover { border-color: var(--accent); }
+.review-toggle:disabled, .review-chip:disabled { opacity: 0.5; cursor: progress; }
+.review-chip.failing { background: var(--failed-soft); color: var(--failed-text); border-color: var(--failed); }
+.review-chip.failing:not(.static):hover { border-color: var(--failed-text); }
+.review-note-dot { opacity: 0.75; }
+.review-panel { display: grid; gap: 10px; border: 1px dashed var(--border-strong); border-radius: 8px; padding: 10px 12px; }
+.review-panel.on { border-style: solid; border-color: var(--accent-border); background: var(--accent-soft); }
+.review-check { gap: 8px; flex-wrap: wrap; cursor: pointer; }
+.review-check input { accent-color: var(--accent); width: 16px; height: 16px; }
+.review-check.failing input { accent-color: var(--failed); }
+.review-check.failing b { color: var(--failed-text); }
+.review-verdicts { display: grid; gap: 6px; }
+.review-panel.on.failing { border-color: var(--failed); background: var(--failed-soft); }
+.review-panel textarea { width: 100%; resize: vertical; font: inherit; color: var(--text); }
+.strip .cell.reviewed { box-shadow: inset 0 -4px 0 var(--accent); }
+.strip .cell.reviewed.failing { box-shadow: inset 0 -4px 0 var(--text); }
+
+/* ─── Informe imprimible de una ejecución (pages/RunReport.jsx) ─── */
+/* Tema claro u oscuro elegido en el propio informe; al imprimir se quitan la barra de opciones y se conservan los fondos. */
+
+.report { max-width: 1100px; margin: 0 auto; padding: 20px 28px 48px; display: flex; flex-direction: column; gap: 16px; }
+.report-toolbar {
+  display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap;
+  padding: 10px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+}
+.report-head { display: flex; flex-direction: column; gap: 4px; padding-bottom: 12px; border-bottom: 2px solid var(--border-strong); }
+.report-kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+.report-kpis > div { display: flex; flex-direction: column; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); }
+.report-kpis .label { color: var(--text-2); font-size: 12px; }
+.report-kpis b { font-size: 22px; }
+.report-icon { font-weight: 700; flex: none; }
+.report-section { display: flex; flex-direction: column; gap: 10px; }
+.report-section > h2 { font-size: 18px; padding-bottom: 4px; border-bottom: 1px solid var(--border); }
+.report-meta { font-size: 11.5px; color: var(--text-2); }
+.report-table td { padding: 5px 10px; }
+.report-table th { position: static; }
+.report-table a.test-title { color: var(--text); }
+.report-table .col-test { width: 46%; }
+.report-project { font-size: 10.5px; color: var(--muted); margin-left: 6px; }
+
+/* Resto de tests: listas por fichero, un test por línea y a dos columnas */
+.report-files { display: flex; flex-direction: column; gap: 8px; }
+.report-file-head { font-size: 11.5px; color: var(--text-2); padding: 2px 0; border-bottom: 1px solid var(--border); break-after: avoid; }
+.report-list { list-style: none; margin: 4px 0 0; padding: 0; columns: 2; column-gap: 28px; font-size: 12px; }
+.report-list.single { columns: 1; }
+.report-list li { display: flex; gap: 6px; align-items: baseline; padding: 1px 0; break-inside: avoid; }
+.report-list .grow { flex: 1; min-width: 0; }
+.report-foot { padding-top: 8px; border-top: 1px solid var(--border); }
+
+/* Solo en pantalla: un A4 impreso mide unos 720 px y debe conservar las dos columnas */
+@media screen and (max-width: 900px) {
+  .report-kpis { grid-template-columns: repeat(2, 1fr); }
+  .report-list { columns: 1; }
+}
+
+@media print {
+  @page { margin: 12mm; }
+  /* Fondos tal cual (también en oscuro), aunque no esté marcado «Gráficos de fondo» */
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: var(--surface); }
+  html:not([data-theme='light']) { background: var(--bg); }
+  body, #root { background: inherit; font-size: 12px; }
+  .no-print { display: none !important; }
+  .report { max-width: none; padding: 0; gap: 12px; }
+  .report-section > h2 { break-after: avoid; }
+  .table tbody tr { break-inside: avoid; }
+  .table tbody tr:hover { background: transparent; }
+  a { color: inherit; }
+}

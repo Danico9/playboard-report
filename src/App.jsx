@@ -4,6 +4,7 @@ import Overview from './pages/Overview'
 import Calendar from './pages/Calendar'
 import Runs from './pages/Runs'
 import RunDetail from './pages/RunDetail'
+import RunReport from './pages/RunReport'
 import Tests from './pages/Tests'
 import TestDetail from './pages/TestDetail'
 import Errors from './pages/Errors'
@@ -20,6 +21,8 @@ export default function App() {
   return (
     <BrowserRouter key={lang}>
       <Routes>
+        {/* Informe imprimible: sin menú lateral */}
+        <Route path="ejecucion/:id/informe" element={<RunReport />} />
         <Route element={<Layout />}>
           <Route index element={<Overview />} />
           <Route path="calendario" element={<Calendar />} />

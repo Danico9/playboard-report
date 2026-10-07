@@ -6,6 +6,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import GithubSlugger from 'github-slugger'
 import { ENV_FILE, applyEnvironments, updateEnvironments } from './environments.mjs'
+import { REVIEWS_FILE, readReviews, updateReviews } from './reviews.mjs'
 import { ingest, importFolder, importZip, listFolders, listZips, CACHE_DIR, NOTES_DIR, REPORTS_DIR, RUNS_DIR, TIME_ZONE } from '../scripts/ingest-reports.mjs'
 
 export { NOTES_DIR, REPORTS_DIR }
@@ -148,6 +149,7 @@ export function createApi({ log = console.log } = {}) {
   let summaryData = null
   let summaryCache = null
   let envWrittenAt = 0
+  let reviewsWrittenAt = 0
   let running = false
   let lastEnd = 0
   let timer = null
@@ -186,6 +188,11 @@ export function createApi({ log = console.log } = {}) {
       if (Date.now() - envWrittenAt < 2000) return
       summaryCache = null
       notify('playboard:data')
+      return
+    }
+    if (abs === REVIEWS_FILE || abs === `${REVIEWS_FILE}.tmp`) {
+      if (Date.now() - reviewsWrittenAt < 2000) return
+      notify('playboard:reviews')
       return
     }
     if (abs.startsWith(NOTES_DIR + path.sep) && abs.endsWith('.md')) {
@@ -241,9 +248,21 @@ export function createApi({ log = console.log } = {}) {
       // Elementos importables: zips y carpetas sueltas de reports/
       if (p === '/api/zips' && req.method === 'GET') return sendJson(res, [...listZips(), ...listFolders()])
       // La cabecera propia obliga a que las acciones que modifican datos vengan de la propia app (evita envíos desde otras webs)
-      if ((p === '/api/zips/import' || p === '/api/environments') && (req.method !== 'POST' || req.headers['x-playboard'] !== '1')) {
+      if (p === '/api/reviews' && req.method === 'GET') return sendJson(res, readReviews())
+      if ((p === '/api/zips/import' || p === '/api/environments' || p === '/api/reviews') && (req.method !== 'POST' || req.headers['x-playboard'] !== '1')) {
         res.statusCode = 403
         return res.end('Petición no permitida')
+      }
+      if (p === '/api/reviews') {
+        try {
+          updateReviews(await readJsonBody(req))
+        } catch (e) {
+          res.statusCode = 400
+          return res.end(String(e.message))
+        }
+        reviewsWrittenAt = Date.now()
+        notify('playboard:reviews')
+        return sendJson(res, { ok: true })
       }
       if (p === '/api/environments') {
         try {

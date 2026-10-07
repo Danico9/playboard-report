@@ -39,13 +39,23 @@ El reporte HTML de Playwright es muy completo, pero solo muestra una ejecución.
   - Todas las pantallas se pueden filtrar por entorno (el selector aparece junto al periodo), y los fallos nuevos y arreglados se calculan contra la ejecución anterior **del mismo entorno**.
   - Desde el detalle de una ejecución puedes cambiar su entorno a mano. Los nombres, las fusiones y las asignaciones se guardan en `reports/environments.json`.
 - **Calendario:** heatmap anual y calendario mensual, con cada día coloreado según su % de éxito.
-- **Detalle de ejecución:** desglose por módulo y lista de tests con filtros y agrupación. Cada test abre un panel con:
+- **Detalle de ejecución:** desglose por módulo y lista de tests con filtros (el botón **Todos** marca a la vez pasados, flaky, fallidos y saltados) y agrupación (con la opción **Con todo su describe**, como en Tests). Cada test abre un panel con:
   - el error con sus colores, las capturas, el vídeo (con controles para adelantar y atrasar), el contexto del error y el stdout;
   - el botón **Abrir trace**, que abre la traza en el visor de Playwright que va dentro del propio reporte (también se puede descargar);
   - los reintentos y su historial en todas las ejecuciones.
+- **Informe / PDF de una ejecución:** el botón **Informe / PDF** del detalle de una ejecución abre un informe para imprimir o guardar como PDF (con «Guardar como PDF» en la ventana de impresión del navegador).
+  - Los **fallidos** salen en una tabla: test, fichero y proyecto, módulo, error, reintentos, duración, fallos conocidos y la marca «Comprobado: OK» o «Sigue fallando» con su motivo y nota.
+  - Los **flaky**, **pasados** y **saltados** salen en listas compactas por fichero (a dos columnas, con el icono de su estado), para que el informe no se alargue aunque haya muchos tests.
+  - Se puede limitar a un módulo, elegir si incluir los pasados y los saltados e imprimirlo en modo **claro** u **oscuro**.
+- **Fallos comprobados («Comprobado: OK»):** junto a cada test fallido o flaky de una ejecución hay una columna para marcarlo como comprobado, por ejemplo después de repetirlo en local y ver que pasa.
+  - En el panel del test puedes añadir el motivo (problema del entorno, fallo puntual, test corregido u otro) y una nota.
+  - Si no se ha podido solucionar, márcalo en el panel como **Sigue fallando** (en rojo) y deja anotado el porqué: motivo (problema del entorno, error de la aplicación, error del propio test u otro) y nota.
+  - Es una marca **solo para ti**: no cambia el estado del test ni ninguna métrica. Se ve en la lista de la ejecución (con un filtro «Sin comprobar» / «Comprobados: OK» / «Sigue fallando»), en el historial del test y en sus cuadrados de colores.
+  - Se guarda en `reports/reviews.json`.
 - **Tests:** índice de todos los tests como en el reporte de Playwright (carpeta → fichero → `describe` → test, en el orden del código), pero con los datos de todo el periodo.
   - Cada test muestra su estado en la última ejecución, su % de éxito, fallos, flaky, duración media y una fila de cuadrados de colores, uno por ejecución.
   - Filtros por estado con contadores (como en Playwright), «Eliminados» e «Inestables en el periodo», buscador (test, fichero, tag o módulo), módulo, proyecto y rango de fechas con atajos (últimos 7, 30 o 90 días).
+  - **Con todo su describe:** al filtrar por un estado (p. ej. Fallidos), muestra también, atenuados, los demás tests del mismo describe en cualquier estado: útil cuando el describe es el test y lo de dentro son sus pasos.
   - Carpetas y ficheros se pliegan y despliegan. Los filtros van en la URL: se conservan al abrir un test y volver atrás.
   - **Tests eliminados:** un test que no aparece en las últimas 5 ejecuciones de su suite se marca como **Eliminado** (se ha borrado, renombrado o excluido).
     No se confunde con un test saltado: los saltados siguen apareciendo en cada reporte. Las ejecuciones parciales (de otra suite, p. ej. de un solo spec) no cuentan.
@@ -188,7 +198,8 @@ Tus reportes y tus notas **solo existen en tu equipo**. No hay base de datos, se
 |---|---|---|
 | Tus reportes y los zips pendientes de importar | `reports/` | No (`.gitignore`) |
 | Tus notas (la app solo las lee, nunca las modifica) | `notes/` | No (`.gitignore`) |
-| Nombres de los entornos, fusiones y asignaciones a mano | `reports/environments.json` (el único fichero que se escribe desde la interfaz) | No (`.gitignore`) |
+| Nombres de los entornos, fusiones y asignaciones a mano | `reports/environments.json` (se escribe desde la interfaz) | No (`.gitignore`) |
+| Tests fallidos que has marcado como comprobados, con su motivo y nota | `reports/reviews.json` (se escribe desde la interfaz) | No (`.gitignore`) |
 | Datos procesados de los reportes | `.cache/` | No (`.gitignore`) |
 | Tu configuración (nombres de módulos, categorías de notas) | `src/config/*.local.js` | No (`.gitignore`) |
 | Idioma, tema y tamaño de página | `localStorage` de tu navegador | No |

@@ -5,12 +5,14 @@ import Markdown from './Markdown'
 import { HistoryStrip, StatusChip, ModuleTag } from './ui'
 import KnownIssues from './KnownIssues'
 import NoteLinks from './NoteLinks'
+import { ReviewPanel } from './Review'
 import { SKIP_REASON, STATUS } from '../config/status'
 import { moduleOfTest } from '../config/modules'
 import { fmtDate, fmtDuration, plural } from '../lib/format'
 import { useKnownIssues, useResource, useSummary, issuesForTest } from '../lib/store'
 import { periodSearch } from '../lib/usePeriod'
 import { numberLocale, t } from '../i18n'
+import { isReviewable, reviewOf, useReviews } from '../lib/reviews'
 
 const attemptLabel = (a, i) => (i === 0 ? t('Intento inicial') : t('Reintento {n}', { n: i }))
 
@@ -104,6 +106,7 @@ export default function TestDrawer({ run, test, onClose }) {
   const location = useLocation()
   const { data: summary } = useSummary()
   const knownIssues = useKnownIssues()
+  const reviews = useReviews()
   const [tab, setTab] = useState(() => Math.max(0, test.attempts.findIndex((a) => a.error)))
   const [shot, setShot] = useState(null)
 
@@ -119,6 +122,7 @@ export default function TestDrawer({ run, test, onClose }) {
   const meta = summary?.tests[test.key] ?? test
   const issues = issuesForTest(knownIssues, meta)
   const attempt = test.attempts[tab]
+  const review = reviewOf(reviews, run.id, test.key)
 
   return (
     <>
@@ -153,11 +157,13 @@ export default function TestDrawer({ run, test, onClose }) {
             </div>
           )}
 
+          {isReviewable(test.outcome) && <ReviewPanel key={review ? 'on' : 'off'} runId={run.id} testKey={test.key} review={review} />}
+
           <KnownIssues issues={issues} />
 
           <section className="stack">
             <h3>{t('Historial')} ({plural(entries.length, 'ejecución', 'ejecuciones')})</h3>
-            <HistoryStrip runs={allRuns} cells={cells} testId={test.testId} />
+            <HistoryStrip runs={allRuns} cells={cells} testId={test.testId} reviews={reviews} testKey={test.key} />
           </section>
 
           {test.attempts.length > 0 && (

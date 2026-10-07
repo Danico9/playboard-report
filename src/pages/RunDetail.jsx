@@ -5,15 +5,22 @@ import { Empty, ErrorBox, Kpi, Loading, ModuleTag, Pagination, StatusBar, Status
 import { STATUS, STATUS_ORDER } from '../config/status'
 import { moduleName, moduleOfTest } from '../config/modules'
 import { fmtDate, fmtDuration, fmtNum, fmtPct, plural } from '../lib/format'
-import { adjacentRunIndex, successRate } from '../lib/stats'
+import { adjacentRunIndex, describeBlock, successRate, withDescribeBlocks } from '../lib/stats'
 import { RunEnvironment } from '../components/Environments'
 import { useKnownIssues, useRunDetail, useSummary, issuesForTest } from '../lib/store'
 import { periodSearch } from '../lib/usePeriod'
 import { paginate, usePagination } from '../lib/usePagination'
 import { t } from '../i18n'
 import { IssueBadge } from '../components/KnownIssues'
+import { ReviewToggle } from '../components/Review'
+import { isReviewable, useReviews, verdictOf } from '../lib/reviews'
 
 const SEVERITY = { failed: 0, flaky: 1, skipped: 2, passed: 3 }
+const DEFAULT_STATUSES = ['failed']
+const NO_REVIEWS = {}
+// Orden en el código: 'carpeta/fichero.spec.ts:42' → fichero y línea
+const lineOf = (x) => Number(/:(\d+)(?::\d+)?$/.exec(x.location ?? '')?.[1] ?? 0)
+const codeOrder = (a, b) => a.file.localeCompare(b.file) || lineOf(a) - lineOf(b)
 
 export default function RunDetail() {
   const { id } = useParams()
@@ -22,6 +29,8 @@ export default function RunDetail() {
   const { data: summary } = useSummary()
   const res = useRunDetail(id)
   const knownIssues = useKnownIssues()
+  const allReviews = useReviews()
+  const reviews = allReviews[id] ?? NO_REVIEWS
 
   const pager = usePagination()
   // Los filtros de esta pantalla no van en la URL: al cambiar uno se vuelve a la primera página
@@ -29,34 +38,47 @@ export default function RunDetail() {
     setter(value)
     pager.setPage(1)
   }
-  const [statuses, setStatusesRaw] = useState(() => new Set(['failed']))
+  const [statuses, setStatusesRaw] = useState(() => new Set(DEFAULT_STATUSES))
   const [query, setQueryRaw] = useState('')
   const [mod, setModRaw] = useState('')
   const [group, setGroupRaw] = useState('file')
   const [sort, setSortRaw] = useState('status')
+  const [reviewed, setReviewedRaw] = useState('')
+  const [withBlock, setWithBlockRaw] = useState(false)
   const setStatuses = withReset(setStatusesRaw)
   const setQuery = withReset(setQueryRaw)
   const setMod = withReset(setModRaw)
   const setGroup = withReset(setGroupRaw)
   const setSort = withReset(setSortRaw)
+  const setReviewed = withReset(setReviewedRaw)
+  const setWithBlock = withReset(setWithBlockRaw)
 
   const detail = res.data
   const tests = useMemo(() => (detail?.tests ?? []).map((x) => ({ ...x, module: moduleOfTest(x) })), [detail])
 
-  const filtered = useMemo(() => {
+  // Con «Con todo su describe» se añaden, atenuados, los demás tests del describe de cada test filtrado (en cualquier estado
+  // y sin aplicarles los demás filtros), y la lista va por bloques en el orden del código para que cada describe quede junto.
+  const { filtered, context } = useMemo(() => {
     const q = query.trim().toLowerCase()
     const sig = (x) => (x.sig != null ? summary?.signatures[x.sig]?.title ?? '' : '')
-    const list = tests.filter((x) =>
+    const matching = tests.filter((x) =>
       statuses.has(x.outcome) &&
       (!mod || x.module === mod) &&
+      (!reviewed || (reviewed === 'no' ? !reviews[x.key] : !!reviews[x.key] && verdictOf(reviews[x.key]) === reviewed)) &&
       (!q || [x.title, ...x.path, x.file, sig(x)].join(' ').toLowerCase().includes(q)))
     const cmp = {
       status: (a, b) => SEVERITY[a.outcome] - SEVERITY[b.outcome] || a.file.localeCompare(b.file),
       duration: (a, b) => b.duration - a.duration,
       name: (a, b) => a.file.localeCompare(b.file) || a.title.localeCompare(b.title),
     }[sort]
-    return list.sort(cmp)
-  }, [tests, statuses, query, mod, sort, summary])
+    matching.sort(cmp)
+    if (!withBlock) return { filtered: matching, context: null }
+    const { list, context } = withDescribeBlocks(tests, matching)
+    const order = new Map()
+    for (const x of matching) if (!order.has(describeBlock(x))) order.set(describeBlock(x), order.size)
+    list.sort((a, b) => order.get(describeBlock(a)) - order.get(describeBlock(b)) || codeOrder(a, b))
+    return { filtered: list, context }
+  }, [tests, statuses, query, mod, sort, summary, reviewed, reviews, withBlock])
 
   const groups = useMemo(() => {
     if (group === 'none') return [[null, filtered]]
@@ -95,12 +117,17 @@ export default function RunDetail() {
   const next = runIndex >= 0 ? summary.runs[adjacentRunIndex(summary, runIndex, 1)] ?? null : null
   const selected = params.get('t') ? tests.find((x) => x.testId === params.get('t')) : null
   const counts = Object.fromEntries(STATUS_ORDER.map((k) => [k, tests.filter((x) => x.outcome === k).length]))
+  const reviewable = tests.filter((x) => isReviewable(x.outcome))
+  const reviewedCount = reviewable.filter((x) => reviews[x.key]).length
   const toggle = (k) => setStatuses((s) => {
     const n = new Set(s)
     if (n.has(k)) n.delete(k)
     else n.add(k)
     return n
   })
+  // «Todos» marca los cuatro estados; si ya lo están, vuelve a los de por defecto (solo fallidos)
+  const allStatuses = STATUS_ORDER.every((k) => statuses.has(k))
+  const toggleAll = () => setStatuses(new Set(allStatuses ? DEFAULT_STATUSES : STATUS_ORDER))
   const openTest = (x) => setParams((p) => { const n = new URLSearchParams(p); n.set('t', x.testId); return n })
   const closeTest = () => setParams((p) => { const n = new URLSearchParams(p); n.delete('t'); return n })
   const runLink = (r) => `/ejecucion/${encodeURIComponent(r.id)}${periodSearch(location.search)}`
@@ -126,7 +153,11 @@ export default function RunDetail() {
         <div className="row wrap">
           {prev && <Link className="btn" to={runLink(prev)} title={`${prev.date} ${prev.time}`}>◀ {t('Anterior')}</Link>}
           {next && <Link className="btn" to={runLink(next)} title={`${next.date} ${next.time}`}>{t('Siguiente')} ▶</Link>}
-          {run.buildHref && <a className="btn" href={run.buildHref} target="_blank" rel="noreferrer">{t('Job del CI')} ↗</a>}
+          <a className="btn" href={`/ejecucion/${encodeURIComponent(run.id)}/informe${mod ? `?mod=${encodeURIComponent(mod)}` : ''}`} target="_blank" rel="noreferrer"
+            title={t('Informe para imprimir o guardar como PDF: los fallidos con todo su detalle y el resto en listas')}>
+            🖶 {t('Informe / PDF')}
+          </a>
+          {run.buildHref && <a className="btn"href={run.buildHref} target="_blank" rel="noreferrer">{t('Job del CI')} ↗</a>}
           <a className="btn primary" href={`/reports/playwright-reports/${encodeURIComponent(run.id)}/index.html`} target="_blank" rel="noreferrer">{t('Reporte original de Playwright')} ↗</a>
         </div>
       </div>
@@ -161,11 +192,19 @@ export default function RunDetail() {
       <div className="card flush">
         <div className="card-head" style={{ flexWrap: 'wrap', paddingBottom: 12 }}>
           <div className="filters">
+            <button className={`toggle${allStatuses ? ' on' : ''}`} onClick={toggleAll} aria-pressed={allStatuses}
+              title={allStatuses ? t('Volver a mostrar solo los fallidos') : t('Mostrar todos los estados: pasados, flaky, fallidos y saltados')}>
+              {t('Todos')}<span className="count">{tests.length}</span>
+            </button>
             {STATUS_ORDER.map((k) => (
               <button key={k} className={`toggle${statuses.has(k) ? ' on' : ''}`} onClick={() => toggle(k)} aria-pressed={statuses.has(k)}>
                 <span style={{ color: STATUS[k].color }}>{STATUS[k].icon}</span>{STATUS[k].plural}<span className="count">{counts[k]}</span>
               </button>
             ))}
+            <label className="row filter-check" title={t('Muestra también, atenuados, los demás tests del mismo describe que los filtrados, en cualquier estado')}>
+              <input type="checkbox" checked={withBlock} onChange={(e) => setWithBlock(e.target.checked)} />
+              {t('Con todo su describe')}
+            </label>
             <input className="input search" placeholder={t('Buscar test, fichero o error…')} value={query} onChange={(e) => setQuery(e.target.value)} />
             <select className="select" value={mod} onChange={(e) => setMod(e.target.value)} aria-label={t('Módulo')}>
               <option value="">{t('Todos los módulos')}</option>
@@ -176,19 +215,30 @@ export default function RunDetail() {
               <option value="module">{t('Agrupar por módulo')}</option>
               <option value="none">{t('Sin agrupar')}</option>
             </select>
+            {reviewable.length > 0 && (
+              <select className={`select${reviewed ? ' on' : ''}`} value={reviewed} onChange={(e) => setReviewed(e.target.value)} aria-label={t('Comprobados')}>
+                <option value="">{t('Comprobados y sin comprobar')}</option>
+                <option value="no">{t('Sin comprobar')}</option>
+                <option value="ok">{t('Comprobados: OK')}</option>
+                <option value="failing">{t('Sigue fallando')}</option>
+              </select>
+            )}
             <select className="select" value={sort} onChange={(e) => setSort(e.target.value)} aria-label={t('Ordenar')}>
               <option value="status">{t('Ordenar por estado')}</option>
               <option value="duration">{t('Ordenar por duración')}</option>
               <option value="name">{t('Ordenar por nombre')}</option>
             </select>
           </div>
-          <span className="muted small">{t('{a} de {b} tests', { a: filtered.length, b: tests.length })}</span>
+          <span className="muted small">
+            {t('{a} de {b} tests', { a: filtered.length, b: tests.length })}
+            {reviewable.length > 0 && <> · <span title={t('Fallidos y flaky que has marcado como comprobados (no cambia las métricas)')}>{t('{a} de {b} fallos comprobados', { a: reviewedCount, b: reviewable.length })}</span></>}
+          </span>
         </div>
         {filtered.length === 0 ? <Empty>{t('Ningún test coincide con los filtros.')}</Empty> : (
           <div className="table-wrap">
             <table className="table">
               <thead>
-                <tr><th style={{ width: 110 }}>{t('Estado')}</th><th>{t('Test')}</th><th>{t('Módulo')}</th><th>{t('Error')}</th><th className="num">{t('Reint.')}</th><th className="num">{t('Duración')}</th></tr>
+                <tr><th style={{ width: 110 }}>{t('Estado')}</th><th style={{ width: 1 }} title={t('Marca personal: no cambia las métricas')}>{t('Comprobado')}</th><th>{t('Test')}</th><th>{t('Módulo')}</th><th>{t('Error')}</th><th className="num">{t('Reint.')}</th><th className="num">{t('Duración')}</th></tr>
               </thead>
               <tbody>
                 {page.items.map(({ name, x, size }, i) => {
@@ -199,14 +249,15 @@ export default function RunDetail() {
                     <Fragment key={x.testId}>
                       {head && (
                         <tr className="group">
-                          <td colSpan={6}>
+                          <td colSpan={7}>
                             <span className={group === 'file' ? 'mono' : ''}>{group === 'module' ? moduleName(name) : name}</span>
                             <span className="muted small"> · {plural(size, 'test', 'tests')}</span>
                           </td>
                         </tr>
                       )}
-                      <tr className="clickable" onClick={() => openTest(x)}>
+                      <tr className={`clickable${context?.has(x.key) ? ' context' : ''}`} onClick={() => openTest(x)}>
                         <td><StatusChip outcome={x.outcome} /></td>
+                        <td className="nowrap">{isReviewable(x.outcome) && <ReviewToggle runId={run.id} testKey={x.key} review={reviews[x.key] ?? null} />}</td>
                         <td style={{ maxWidth: 520 }}>
                           <div className="test-title">{[...x.path, x.title].join(' › ')}</div>
                           {group !== 'file' && <div className="test-sub truncate">{x.file}</div>}

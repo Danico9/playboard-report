@@ -53,7 +53,7 @@ Mapeo de estados: `expected` → pasado, `unexpected` → fallido, `flaky` → f
 ## Entornos (`server/environments.mjs`)
 
 - **Detección (ingesta).** Cada ejecución lleva `run.signal = { key, source, value, hosts }`. La clave sale, por este orden, de `metadata.environment`/`metadata.env` (`meta:<valor>`), `metadata.baseURL` (`host:<dominio>`), el dominio más frecuente en las URLs de los detalles de cada spec, con los pasos incluidos (`host:<dominio>`; sin los dominios del CI ni los de documentación como `playwright.dev`), y la rama del CI (`branch:<rama>`). Sin nada de eso, `key` es `null`. `countHosts()` se calcula al leer el HTML (antes de quitar los `steps`) y se guarda en `runs/<id>.raw.json`.
-- **Decisiones del usuario.** Se guardan en `reports/environments.json`, el único fichero que escribe la interfaz. Está en `reports/` y no en `.cache/` para que no se pierda al regenerar la caché y para que acompañe a los reportes (también junto al ejecutable):
+- **Decisiones del usuario.** Se guardan en `reports/environments.json`, uno de los dos ficheros que escribe la interfaz (el otro es `reports/reviews.json`). Está en `reports/` y no en `.cache/` para que no se pierda al regenerar la caché y para que acompañe a los reportes (también junto al ejecutable):
 
   ```json
   {
@@ -69,6 +69,18 @@ Mapeo de estados: `expected` → pasado, `unexpected` → fallido, `flaky` → f
 - **Resolución (API).** `applyEnvironments()` se aplica al servir `/api/summary` (no en la ingesta: cambiar un nombre no obliga a reprocesar nada). Añade `run.env` (id del entorno con nombre, la propia señal si no lo tiene o `_none`) y `run.envManual`, y `summary.environments` con sus señales, número de ejecuciones, fechas y `pending` (sin nombre y sin descartar, solo si hay más de un entorno).
 - **Cliente.** El filtro va en la URL (`?env=`) y lo aplica `useReport()`. `compareRuns()` y «Anterior/Siguiente» usan la ejecución adyacente del mismo entorno (`adjacentRunIndex()` en `lib/stats.js`).
 
+## Fallos comprobados (`server/reviews.mjs`)
+
+- Marca personal que el usuario pone a un test fallido o flaky de una ejecución: «Comprobado: OK» (p. ej. tras repetirlo en local) o «Sigue fallando» (para anotar el porqué de un fallo que no se ha podido solucionar; en rojo). **No toca la ingesta ni las métricas**: solo se muestra al lado.
+- Se guarda en `reports/reviews.json` (fuera de `.cache/`, como `environments.json`), por ejecución y por la clave estable del test:
+
+  ```json
+  { "version": 1, "runs": { "<runId>": { "<proyecto|fichero|describe › título>": { "verdict": "ok", "reason": "fixed", "note": "…", "at": "<ISO>" } } } }
+  ```
+
+  `verdict` es `ok` o `failing` (sin él, `ok`: marcas anteriores). `reason` es opcional y depende del veredicto: con `ok`, `environment`, `transient`, `fixed` u `other`; con `failing`, `environment`, `bug`, `test` u `other`. Al cambiar de veredicto se renueva `at`. La nota se limita a 500 caracteres.
+- **Cliente.** `lib/reviews.js` (`useReviews()`, `saveReview()`, `clearReview()`, motivos) y `components/Review.jsx`: `ReviewToggle` (columna «Comprobado» de `RunDetail`), `ReviewPanel` (panel del test en `TestDrawer`) y `ReviewBadge` (historial de `TestDetail`). `HistoryStrip` marca las celdas comprobadas si recibe `reviews` y `testKey`.
+
 ## Módulos
 
 El módulo que se muestra lo decide el cliente (`moduleOfTest` en `src/config/modules.js`), por este orden: tag `@module:<id>` del test, reglas `MODULE_RULES` de `modules.local.js` (por tag o por ruta), módulo automático de la ingesta y, al final, `general`. Después se aplican los alias (`MODULE_ALIASES`) y los nombres legibles (`MODULES`).
@@ -79,6 +91,8 @@ El módulo que se muestra lo decide el cliente (`moduleOfTest` en `src/config/mo
 |---|---|
 | `GET /api/summary` | `summary.json` con los entornos aplicados (`run.env`, `environments`) |
 | `POST /api/environments` | `{ action, … }`: `name` (`key`, `name`), `merge` (`key`, `env`), `dismiss`/`undismiss`/`unlink` (`key`), `rename` (`env`, `name`; si el nombre ya existe, fusiona), `delete` (`env`) y `assignRun` (`run`, `env` o `null`). Exige la cabecera `x-playboard: 1` |
+| `GET /api/reviews` | Fallos comprobados (`reports/reviews.json`) |
+| `POST /api/reviews` | `{ action: 'set', run, test, reason?, note? }` o `{ action: 'clear', run, test }`. Exige la cabecera `x-playboard: 1` |
 | `GET /api/runs/:id` | Detalle de una ejecución |
 | `GET /api/info` | Zona horaria y rutas de las carpetas |
 | `GET /api/zips` | Zips de `reports/` y su estado |
@@ -86,7 +100,7 @@ El módulo que se muestra lo decide el cliente (`moduleOfTest` en `src/config/mo
 | `GET /api/notes` | Índice de notas con sus encabezados |
 | `GET /api/notes/file?path=` | Contenido de una nota |
 | `GET /api/notes/search?q=` | Búsqueda de texto en las notas |
-| `GET /api/events` | Server-Sent Events: `playboard:data`, `playboard:zips`, `playboard:notes` |
+| `GET /api/events` | Server-Sent Events: `playboard:data`, `playboard:zips`, `playboard:notes`, `playboard:reviews` |
 | `GET /reports/**` | Ficheros de los reportes (capturas, vídeos, trazas, `index.html` original y visor de trazas `trace/`). Admite `Range` para poder moverse por los vídeos |
 
 Todas las rutas de ficheros se validan para no salir de su carpeta. `createApi()` devuelve el middleware y `handleFsEvent()`, que recibe los cambios de ficheros: en desarrollo los da el watcher de Vite (`plugins/vite-plugin-playboard.js`) y en el ejecutable `fs.watch`. Los avisos llegan al navegador por Server-Sent Events (`/api/events`) y la app recarga solo lo necesario.
@@ -144,6 +158,10 @@ Configuración local (`src/config/*.local.js`):
 - `lib/usePagination.js`: paginación de listas largas. La página va en la URL como `?pg=` (`p` es el tipo de periodo) y se quita al cambiar un filtro
   (`useUrlFilters`) o el periodo; el tamaño de página se guarda en `localStorage` (`playboard-page-size`). `paginate()` corta la lista y `<Pagination>` (en `components/ui.jsx`) pinta los controles.
   En las listas agrupadas (árbol de Tests, tablas por módulo o fichero, detalle de ejecución) se paginan los tests y la cabecera del grupo se repite al principio de cada página; un grupo plegado ocupa un solo hueco.
+- `pages/RunReport.jsx` (`/ejecucion/:id/informe`, fuera de `Layout`): informe imprimible de una ejecución. Su tema va en la URL (`?theme=dark`, claro por defecto) y se aplica a `data-theme` mientras está abierto, sin tocar la preferencia guardada;
+  `document.title` es el nombre que el navegador propone para el PDF. Los fallidos van en una tabla (error, revisión con su nota y fallos conocidos);
+  el resto va en listas por fichero a dos columnas (el proyecto solo se indica en los tests repetidos). Los estilos están en `styles/base.css` (`.report*`, `@media print` y `.no-print`):
+  la regla de pantalla estrecha va con `@media screen` porque un A4 impreso mide unos 720 px, y `print-color-adjust: exact` conserva los fondos del modo oscuro. Como es para imprimir, no se pagina.
 - `pages/Tests.jsx`: índice tipo reporte de Playwright (carpeta → fichero → `describe` → test). Los tests se ordenan por la línea de `location`.
 - `components/TestStatsTable.jsx`: tabla de estadísticas por test, agrupable por módulo o fichero; la usa la pestaña «Tests por módulo» de `pages/Modules.jsx`.
 - `lib/importResults.js`: resultados de «Importar» fuera del componente (y en `sessionStorage`), para que sigan a la vista al cambiar de pantalla hasta que se cierren.

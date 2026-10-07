@@ -41,6 +41,20 @@ export function adjacentRunIndex(summary, runIndex, dir) {
 // (con estado «saltado»), así que nunca se da por eliminado. Se mira todo el histórico, no el periodo.
 // Devuelve Map clave → { lastSeen: índice de su última ejecución, lastDate, missing: ejecuciones en las que falta }
 const removedCache = new WeakMap()
+// Bloque de un test para «Con todo su describe»: su describe de primer nivel en su fichero y proyecto
+// (en las suites de flujos, el describe es el test y lo de dentro, sus pasos). Un test fuera de describe va solo.
+export const describeBlock = (m) => `${m.project}|${m.file}|${m.path?.length ? m.path[0] : `#${m.location ?? m.title}`}`
+
+// Los tests de `all` que comparten bloque con alguno de `matching`; `context` son las claves de los añadidos (no cumplían el filtro).
+// `meta` da el test (título, describes, fichero, proyecto) de cada elemento.
+export function withDescribeBlocks(all, matching, meta = (x) => x) {
+  const block = (x) => describeBlock(meta(x))
+  const blocks = new Set(matching.map(block))
+  const hit = new Set(matching)
+  const list = all.filter((x) => blocks.has(block(x)))
+  return { list, context: new Set(list.filter((x) => !hit.has(x)).map((x) => x.key)) }
+}
+
 export function removedTests(summary) {
   let out = removedCache.get(summary)
   if (out) return out

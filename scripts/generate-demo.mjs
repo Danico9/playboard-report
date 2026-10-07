@@ -188,6 +188,9 @@ const COMMITS = [
 // La app lo detecta por el dominio de las URLs de las salidas (ver «Entornos»).
 const hostOf = (start) => (start.getUTCHours() >= 11 ? 'qa.tienda-demo.example.com' : 'staging.tienda-demo.example.com')
 
+// Tests fallidos y flaky de cada ejecución, para las revisiones de ejemplo (reports/reviews.json)
+const failures = []
+
 function buildRun(start, runIndex) {
   const day = start.toISOString().slice(0, 10)
   const host = hostOf(start)
@@ -262,6 +265,7 @@ function buildRun(start, runIndex) {
 
         stats.total++
         stats[outcome]++
+        if (outcome === 'unexpected' || outcome === 'flaky') failures.push({ run: id, key: `${project}|${spec.file}|${spec.describe} › ${title}` })
         const duration = results.reduce((a, r) => a + r.duration, 0)
         const base = {
           testId, title, projectName: project,
@@ -444,7 +448,8 @@ export function generateDemo({ log = console.log } = {}) {
   // (con el nombre por defecto de Playwright) y las dos últimas como zips pendientes
   const toZip = dates.slice(-2)
   const loose = dates.at(-3)
-  dates.slice(0, -3).forEach((d, i) => buildRun(d, i))
+  failures.length = 0
+  const importedIds = dates.slice(0, -3).map((d, i) => buildRun(d, i))
   const looseId = buildRun(loose, dates.length - 3)
   const looseTarget = path.join(DEMO_DIR, 'reports', 'informe-descargado', 'playwright-report')
   fs.mkdirSync(path.dirname(looseTarget), { recursive: true })
@@ -472,6 +477,20 @@ export function generateDemo({ log = console.log } = {}) {
     runs: {},
     dismissed: [],
   }, null, 2))
+  // Algunos fallos de las últimas ejecuciones importadas ya están marcados como comprobados (OK o sigue fallando, con y sin motivo y nota)
+  const imported = new Set(importedIds.slice(-3))
+  const samples = [
+    { reason: 'environment', note: 'El servicio de correo de staging estaba caído; en local pasa.' },
+    { reason: 'fixed', note: 'Cambió el data-testid del botón; selector actualizado en el page object.' },
+    { reason: 'transient', note: '' },
+    { reason: null, note: '' },
+    { verdict: 'failing', reason: 'bug', note: 'El total del carrito no aplica el descuento; reportado al equipo de desarrollo.' },
+  ]
+  const reviews = {}
+  failures.filter((f) => imported.has(f.run)).filter((_, i) => i % 2 === 0).forEach((f, i) => {
+    reviews[f.run] = { ...reviews[f.run], [f.key]: { verdict: 'ok', ...samples[i % samples.length], at: new Date(Date.now() - (i + 1) * 3600e3).toISOString() } }
+  })
+  fs.writeFileSync(path.join(DEMO_DIR, 'reports', 'reviews.json'), JSON.stringify({ version: 1, runs: reviews }, null, 2))
   for (const [rel, content] of Object.entries(NOTES)) {
     const p = path.join(DEMO_DIR, 'notes', rel)
     fs.mkdirSync(path.dirname(p), { recursive: true })

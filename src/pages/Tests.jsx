@@ -4,7 +4,7 @@ import PeriodToolbar, { DateRangeFilter } from '../components/PeriodToolbar'
 import { Empty, ErrorBox, HistoryStrip, Loading, ModuleTag, Pagination, RemovedChip, StatusBar } from '../components/ui'
 import { IssueBadge } from '../components/KnownIssues'
 import { useReport } from '../lib/useReport'
-import { removedTitle, testRows } from '../lib/stats'
+import { removedTitle, testRows, withDescribeBlocks } from '../lib/stats'
 import { REMOVED, REMOVED_AFTER_RUNS, STATUS, healthOf } from '../config/status'
 import { moduleName } from '../config/modules'
 import { fmtDuration, fmtPct, plural } from '../lib/format'
@@ -42,7 +42,8 @@ const statusMatch = {
 }
 const LABELS = { ...STATUS, removed: REMOVED }
 
-const DEFAULTS = { q: '', s: 'all', mod: '', proj: '' }
+const DEFAULTS = { q: '', s: 'all', mod: '', proj: '', ctx: '' }
+
 const HISTORY_RUNS = 20
 
 // 'flows/flows-003-payments-card.spec.ts:42' → ['flows/flows-003-payments-card.spec.ts', 42]
@@ -152,6 +153,7 @@ export default function Tests() {
   const status = statusMatch[get('s')] ? get('s') : 'all'
   const mod = get('mod')
   const project = get('proj')
+  const withBlock = get('ctx') === '1' && status !== 'all'
   const [collapsed, setCollapsed] = useState(() => new Set())
   const pager = usePagination()
 
@@ -166,7 +168,13 @@ export default function Tests() {
       (!q || [r.meta.title, ...r.meta.path, r.meta.file, ...(r.meta.tags ?? []), r.module, moduleName(r.module)].join(' ').toLowerCase().includes(q)))
   }, [rows, query, mod, project])
   const counts = useMemo(() => ({ ...countStats(scoped), unstable: scoped.filter(statusMatch.unstable).length }), [scoped])
-  const tree = useMemo(() => buildTree(scoped.filter(statusMatch[status])), [scoped, status])
+  // Con «Con todo su describe», los tests que no cumplen el estado pero comparten bloque con alguno que sí se muestran atenuados
+  const { tree, context } = useMemo(() => {
+    const matching = scoped.filter(statusMatch[status])
+    if (!withBlock) return { tree: buildTree(matching), context: null }
+    const { list, context } = withDescribeBlocks(scoped, matching, (r) => r.meta)
+    return { tree: buildTree(list), context }
+  }, [scoped, status, withBlock])
   const units = useMemo(() => treeUnits(tree, collapsed), [tree, collapsed])
   const page = paginate(units, pager)
   const pageTree = regroup(page.items)
@@ -193,7 +201,7 @@ export default function Tests() {
     return (
       <div
         key={r.key}
-        className={`tree-test${r.removed ? ' removed' : ''}`}
+        className={`tree-test${r.removed ? ' removed' : ''}${context?.has(r.key) ? ' context' : ''}`}
         role="link"
         tabIndex={0}
         style={{ paddingLeft: 18 + r.meta.path.length * 18 }}
@@ -277,9 +285,15 @@ export default function Tests() {
               </button>
             ))}
           </div>
+          {status !== 'all' && (
+            <label className="row filter-check" title={t('Muestra también, atenuados, los demás tests del mismo describe que los filtrados, en cualquier estado')}>
+              <input type="checkbox" checked={withBlock} onChange={(e) => set({ ctx: e.target.checked ? '1' : '' })} />
+              {t('Con todo su describe')}
+            </label>
+          )}
           <button className="btn" onClick={() => setCollapsed(new Set())}>{t('Desplegar todo')}</button>
           <button className="btn" onClick={() => setCollapsed(new Set(allKeys()))}>{t('Plegar todo')}</button>
-          {hasFilters && <button className="btn" onClick={() => set({ q: '', s: 'all', mod: '', proj: '' })}>{t('Quitar filtros')}</button>}
+          {hasFilters && <button className="btn" onClick={() => set({ q: '', s: 'all', mod: '', proj: '', ctx: '' })}>{t('Quitar filtros')}</button>}
           <span className="spacer" />
           <span className="muted small">{t('{a} de {b} tests', { a: shown, b: rows.length })} · {plural(fileCount, 'fichero', 'ficheros')}</span>
         </div>

@@ -130,7 +130,8 @@ Dónde se guardan tus datos
 - El programa (${path.basename(EXE)}) no lleva dentro ningún reporte ni nota: los lee de "reports" y "notes".
 - La primera vez extrae los datos de cada reporte y los guarda en ".cache" para que la app vaya rápida.
   Después solo lee los reportes nuevos. ".cache" se puede borrar cuando quieras: se vuelve a generar.
-- Los nombres que pongas a los entornos se guardan en "reports/environments.json".
+- Los nombres que pongas a los entornos se guardan en "reports/environments.json",
+  y los fallos que marques como comprobados, en "reports/reviews.json".
 - La app solo se puede abrir desde este equipo (127.0.0.1).
 
 IMPORTANTE: si quieres pasarle el programa a otra persona, comparte solo ${path.basename(EXE)}
@@ -153,7 +154,8 @@ Where your data is stored
 - The program (${path.basename(EXE)}) contains no reports or notes: it reads them from "reports" and "notes".
 - The first time, it extracts the data of each report and stores it in ".cache" so the app stays fast.
   Afterwards it only reads new reports. ".cache" can be deleted at any time: it is generated again.
-- The names you give to environments are saved in "reports/environments.json".
+- The names you give to environments are saved in "reports/environments.json",
+  and the failures you mark as checked, in "reports/reviews.json".
 - The app can only be opened from this computer (127.0.0.1).
 
 IMPORTANT: to give the program to someone else, share only ${path.basename(EXE)}

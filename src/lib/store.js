@@ -46,6 +46,7 @@ if (typeof EventSource !== 'undefined') {
   events.addEventListener('playboard:data', () => refreshData())
   events.addEventListener('playboard:notes', () => invalidate('/api/notes'))
   events.addEventListener('playboard:zips', () => invalidate('/api/zips'))
+  events.addEventListener('playboard:reviews', () => refreshReviews())
   import.meta.hot?.dispose(() => events.close())
 }
 
@@ -55,6 +56,7 @@ export const useNotesIndex = () => useResource('/api/notes')
 export const useZips = () => useResource('/api/zips')
 export const useInfo = () => useResource('/api/info')
 export const refreshZips = () => invalidate('/api/zips')
+export const refreshReviews = () => invalidate('/api/reviews')
 export function refreshData() {
   for (const url of [...cache.keys()]) if (url.startsWith('/api/runs/')) cache.delete(url)
   invalidate('/api/summary')

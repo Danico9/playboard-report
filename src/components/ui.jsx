@@ -42,21 +42,26 @@ export function StatusLegend({ items = STATUS_ORDER }) {
 }
 
 // Un cuadrado por ejecución; enlaza a la ficha del test en esa ejecución
-export function HistoryStrip({ runs, cells, testId, onPick }) {
+// Con `reviews` y `testKey`, marca las ejecuciones en las que el usuario comprobó el fallo (ver lib/reviews.js):
+// raya de acento si está OK y raya del color del texto si sigue fallando
+export function HistoryStrip({ runs, cells, testId, onPick, reviews, testKey }) {
   const location = useLocation()
   return (
     <div className="strip">
       {runs.map((r) => {
         const o = cells.get(r.index)
-        const title = `${fmtDate(r.date)} ${r.time} · ${o ? STATUS[o].label : t('No ejecutado en esta ejecución')}`
+        const reviewed = o && reviews?.[r.id]?.[testKey]
+        const failing = reviewed?.verdict === 'failing'
+        const title = `${fmtDate(r.date)} ${r.time} · ${o ? STATUS[o].label : t('No ejecutado en esta ejecución')}${reviewed ? ` · ${t(failing ? 'Sigue fallando' : 'Comprobado: OK')}` : ''}`
+        const cls = `cell ${o}${reviewed ? ' reviewed' : ''}${failing ? ' failing' : ''}`
         if (!o) return <span key={r.id} className="cell none" title={title} />
         if (onPick) {
-          return <a key={r.id} className={`cell ${o}`} title={title} href="#" onClick={(e) => { e.preventDefault(); e.stopPropagation(); onPick(r) }} />
+          return <a key={r.id} className={cls} title={title} href="#" onClick={(e) => { e.preventDefault(); e.stopPropagation(); onPick(r) }} />
         }
         return (
           <Link
             key={r.id}
-            className={`cell ${o}`}
+            className={cls}
             title={title}
             onClick={(e) => e.stopPropagation()}
             to={`/ejecucion/${encodeURIComponent(r.id)}${periodSearch(location.search, testId ? { t: testId } : {})}`}

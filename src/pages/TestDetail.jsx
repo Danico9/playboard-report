@@ -12,6 +12,8 @@ import { paginate, usePagination } from '../lib/usePagination'
 import { issuesForTest, useKnownIssues, useSummary } from '../lib/store'
 import { periodSearch } from '../lib/usePeriod'
 import { t } from '../i18n'
+import { ReviewBadge } from '../components/Review'
+import { reviewOf, useReviews } from '../lib/reviews'
 
 export default function TestDetail() {
   const [params] = useSearchParams()
@@ -21,6 +23,7 @@ export default function TestDetail() {
   const summary = res.data
   const knownIssues = useKnownIssues()
   const pager = usePagination()
+  const reviews = useReviews()
 
   const data = useMemo(() => {
     if (!summary || !summary.results[key]) return null
@@ -92,7 +95,7 @@ export default function TestDetail() {
 
       <div className="card">
         <div className="card-head"><div><h2>{t('Historial')}</h2><p>{t('Un cuadrado por ejecución (todas las ejecuciones). Clic para abrir el test en esa ejecución.')}</p></div><StatusLegend /></div>
-        <HistoryStrip runs={data.runs} cells={data.cells} testId={meta.testId} />
+        <HistoryStrip runs={data.runs} cells={data.cells} testId={meta.testId} reviews={reviews} testKey={key} />
       </div>
 
       {data.executed.length > 1 && (
@@ -128,7 +131,7 @@ export default function TestDetail() {
               {page.items.map((p) => (
                 <tr key={p.run.id}>
                   <td className="nowrap"><Link to={runLink(p)}>{fmtDate(p.date, 'EEE d MMM yyyy')} · {p.time}</Link></td>
-                  <td><StatusChip outcome={p.outcome} /></td>
+                  <td className="nowrap"><StatusChip outcome={p.outcome} /> <ReviewBadge review={reviewOf(reviews, p.run.id, key)} /></td>
                   <td className="num">{p.outcome === 'skipped' ? '—' : fmtDuration(p.duration)}</td>
                   <td className="num">{p.retries || ''}</td>
                   <td className="small text-2 truncate" style={{ maxWidth: 600 }} title={p.sig != null ? summary.signatures[p.sig].title : ''}>

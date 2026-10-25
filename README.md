@@ -13,8 +13,10 @@ El reporte HTML de Playwright es muy completo, pero solo muestra una ejecución.
 
 | | |
 |---|---|
-| ![Detalle de una ejecución con el panel de un test fallido](docs/screenshots/run-dark.png) | ![Tests con su historial por ejecución](docs/screenshots/tests-dark.png) |
-| **Ejecución**: panel del test con error, capturas y reintentos | **Tests**: índice como el reporte de Playwright, con su historial |
+| ![Detalle de una ejecución con la columna de fallos comprobados](docs/screenshots/run-dark.png) | ![Panel de un test fallido marcado como comprobado](docs/screenshots/run-test-dark.png) |
+| **Ejecución**: tests con su estado, error y marca «Comprobado» | **Test de una ejecución**: marca de comprobado, error, capturas y reintentos |
+| ![Tests con su historial por ejecución](docs/screenshots/tests-dark.png) | ![Informe imprimible de una ejecución](docs/screenshots/run-report-light.png) |
+| **Tests**: índice como el reporte de Playwright, con su historial | **Informe / PDF** de una ejecución |
 | ![Calendario coloreado por % de éxito](docs/screenshots/calendar-dark.png) | ![Errores agrupados por tipo](docs/screenshots/errors-dark.png) |
 | **Calendario** | **Errores** agrupados |
 | ![Importar zips de artefactos](docs/screenshots/import-dark.png) | ![Visor de notas](docs/screenshots/notes-dark.png) |

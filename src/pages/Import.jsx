@@ -5,6 +5,7 @@ import { Empty, ErrorBox, Loading } from '../components/ui'
 import { refreshData, refreshZips, useInfo, useSummary, useZips } from '../lib/store'
 import { addImportResults, clearImportResults, dismissImportResult, useImportResults } from '../lib/importResults'
 import { fmtDate } from '../lib/format'
+import { appUrl } from '../lib/webMode'
 import { numberLocale, t } from '../i18n'
 
 // El nombre de la carpeta está en UTC: 2026-09-23_01-03-36_all-tests
@@ -77,7 +78,7 @@ export default function Import() {
     setBusy(true)
     setError(null)
     try {
-      const r = await fetch('/api/zips/import', {
+      const r = await fetch(appUrl('/api/zips/import'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-playboard': '1' },
         body: JSON.stringify({ items: chosen.map(({ kind, name }) => ({ kind, name })) }),

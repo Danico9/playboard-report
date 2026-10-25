@@ -5,6 +5,7 @@
 // Se guarda en reports/reviews.json con POST /api/reviews (ver server/reviews.mjs).
 
 import { refreshReviews, useResource } from './store'
+import { appUrl } from './webMode'
 import { t } from '../i18n'
 
 // Veredictos: OK (color de acento) o sigue fallando (rojo). Sin verdict = 'ok' (marcas de versiones anteriores)
@@ -61,7 +62,7 @@ export function useReviews() {
 export const reviewOf = (reviews, runId, testKey) => reviews[runId]?.[testKey] ?? null
 
 async function post(body) {
-  const r = await fetch('/api/reviews', {
+  const r = await fetch(appUrl('/api/reviews'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-playboard': '1' },
     body: JSON.stringify(body),

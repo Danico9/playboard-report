@@ -37,6 +37,14 @@ export const MODULES = {
   ...local.MODULES,
 }
 
+// Versión web: los nombres de la demo solo cuando lo que se ve son los datos de ejemplo
+export function setDemoModuleNames(on) {
+  for (const [id, name] of Object.entries(DEMO_MODULES)) {
+    if (on) MODULES[id] ??= name
+    else if (MODULES[id] === name) delete MODULES[id]
+  }
+}
+
 const TAG_PREFIX = '@module:'
 
 function ruleMatches(rule, tags, file) {

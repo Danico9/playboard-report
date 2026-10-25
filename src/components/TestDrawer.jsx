@@ -10,6 +10,7 @@ import { SKIP_REASON, STATUS } from '../config/status'
 import { moduleOfTest } from '../config/modules'
 import { fmtDate, fmtDuration, plural } from '../lib/format'
 import { useKnownIssues, useResource, useSummary, issuesForTest } from '../lib/store'
+import { WEB_MODE, appUrl, downloadFile, openTraceViewer } from '../lib/webMode'
 import { periodSearch } from '../lib/usePeriod'
 import { numberLocale, t } from '../i18n'
 import { isReviewable, reviewOf, useReviews } from '../lib/reviews'
@@ -33,7 +34,7 @@ function ErrorContext({ url }) {
 }
 
 function Attempt({ attempt, runId, openShot, timeZone }) {
-  const base = `/reports/playwright-reports/${encodeURIComponent(runId)}/`
+  const base = appUrl(`/reports/playwright-reports/${encodeURIComponent(runId)}/`)
   return (
     <div className="stack" style={{ gap: 14 }}>
       <div className="row wrap small text-2">
@@ -71,12 +72,16 @@ function Attempt({ attempt, runId, openShot, timeZone }) {
       {(attempt.trace || attempt.video) && (
         <div className="row wrap">
           {/* El visor de trazas va dentro de cada reporte (trace/), igual que en el reporte HTML de Playwright */}
-          {attempt.trace && (
+          {attempt.trace && (WEB_MODE ? (
+            <button className="btn primary" onClick={() => openTraceViewer(base + attempt.trace)}>{t('Abrir trace')} ↗</button>
+          ) : (
             <a className="btn primary" href={`${base}trace/index.html?trace=${encodeURIComponent(new URL(base + attempt.trace, window.location.href).href)}`} target="_blank" rel="noreferrer">
               {t('Abrir trace')} ↗
             </a>
-          )}
-          {attempt.trace && <a className="btn" href={base + attempt.trace} download>{t('Descargar trace')}</a>}
+          ))}
+          {attempt.trace && (WEB_MODE
+            ? <button className="btn" onClick={() => downloadFile(base + attempt.trace)}>{t('Descargar trace')}</button>
+            : <a className="btn" href={base + attempt.trace} download>{t('Descargar trace')}</a>)}
           {attempt.video && <a className="btn" href={base + attempt.video} target="_blank" rel="noreferrer">{t('Abrir vídeo en otra pestaña')} ↗</a>}
         </div>
       )}

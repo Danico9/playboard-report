@@ -4,6 +4,7 @@
 
 import { useSearchParams } from 'react-router'
 import { refreshData } from './store'
+import { appUrl } from './webMode'
 import { t } from '../i18n'
 
 export const ENV_PARAM = 'env'
@@ -46,7 +47,7 @@ export function useEnvFilter() {
 }
 
 export async function saveEnvironments(body) {
-  const r = await fetch('/api/environments', {
+  const r = await fetch(appUrl('/api/environments'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-playboard': '1' },
     body: JSON.stringify(body),

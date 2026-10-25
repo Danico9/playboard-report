@@ -4,7 +4,9 @@
 
 El reporte HTML de Playwright es muy completo, pero solo muestra una ejecución. playboard-report junta todos tus reportes y te enseña cómo evolucionan por **día, semana, mes y año**: qué tests fallan más, cuáles son flaky, qué errores se repiten, qué se ha roto o arreglado desde la ejecución anterior y cuánto duran las ejecuciones. Además tiene un visor para tus notas en Markdown.
 
-> *English summary:* a local dashboard (dark mode by default, light mode available; UI in Spanish or English) that aggregates many Playwright HTML reports over time (day/week/month/year views, flaky and failing tests, grouped errors, per-module health) plus a Markdown notes viewer. The UI can be switched between Spanish and English. Your reports and notes stay on your machine and are git-ignored.
+**Pruébalo sin instalar nada:** la [versión web](https://danico9.github.io/playboard-report/) funciona en el navegador con los datos de ejemplo o con tu carpeta de reportes, que se lee desde tu navegador sin subirse a ningún sitio (ver [Versión web](#versión-web-en-el-navegador)).
+
+> *English summary:* a local dashboard (dark mode by default, light mode available; UI in Spanish or English) that aggregates many Playwright HTML reports over time (day/week/month/year views, flaky and failing tests, grouped errors, per-module health) plus a Markdown notes viewer. The UI can be switched between Spanish and English. Your reports and notes stay on your machine and are git-ignored. There is also a [web version](https://danico9.github.io/playboard-report/) that reads your reports folder from the browser, without uploading anything.
 
 ![Resumen en modo oscuro](docs/screenshots/overview-dark.png)
 
@@ -25,6 +27,8 @@ El reporte HTML de Playwright es muy completo, pero solo muestra una ejecución.
 | **Módulos**: salud de cada área y todos sus tests | **Entornos**: ponles nombre o fusiónalos |
 | ![Resumen en modo claro](docs/screenshots/overview-light.png) | ![Resumen con la interfaz en inglés](docs/screenshots/overview-dark-en.png) |
 | **Modo claro** | **Interfaz en inglés** |
+| ![Pantalla de bienvenida de la versión web](docs/screenshots/web-welcome-dark.png) | |
+| **Versión web**: elige tu carpeta o mira los datos de ejemplo | |
 
 </details>
 
@@ -43,7 +47,7 @@ El reporte HTML de Playwright es muy completo, pero solo muestra una ejecución.
 - **Calendario:** heatmap anual y calendario mensual, con cada día coloreado según su % de éxito.
 - **Detalle de ejecución:** desglose por módulo y lista de tests con filtros (el botón **Todos** marca a la vez pasados, flaky, fallidos y saltados) y agrupación (con la opción **Con todo su describe**, como en Tests). Cada test abre un panel con:
   - el error con sus colores, las capturas, el vídeo (con controles para adelantar y atrasar), el contexto del error y el stdout;
-  - el botón **Abrir trace**, que abre la traza en el visor de Playwright que va dentro del propio reporte (también se puede descargar);
+  - el botón **Abrir trace**, que abre la traza en el visor de Playwright que va dentro del propio reporte (también se puede descargar; en la versión web se abre en el visor de Playwright publicado junto a la web);
   - los reintentos y su historial en todas las ejecuciones.
 - **Informe / PDF de una ejecución:** el botón **Informe / PDF** del detalle de una ejecución abre un informe para imprimir o guardar como PDF (con «Guardar como PDF» en la ventana de impresión del navegador).
   - Los **fallidos** salen en una tabla: test, fichero y proyecto, módulo, error, reintentos, duración, fallos conocidos y la marca «Comprobado: OK» o «Sigue fallando» con su motivo y nota.
@@ -75,6 +79,7 @@ El reporte HTML de Playwright es muy completo, pero solo muestra una ejecución.
 - **Modo oscuro y claro:** oscuro por defecto; se cambia con el botón del menú lateral y se recuerda en el navegador.
 - **Castellano e inglés:** selector ES/EN en el menú lateral, con fechas y números en el formato de cada idioma.
 - **Todo en local:** no hay servidor externo ni base de datos. Tus reportes y notas nunca salen de tu equipo ni se suben al repositorio.
+- **Tres formas de usarlo:** con Node.js (`npm run dev`), con el [ejecutable](#ejecutable-sin-instalar-nada) o con la [versión web](#versión-web-en-el-navegador), sin instalar nada. La versión web se reconoce por la marca **Web** junto al nombre de la app.
 
 ## Requisitos
 
@@ -205,6 +210,7 @@ Tus reportes y tus notas **solo existen en tu equipo**. No hay base de datos, se
 | Datos procesados de los reportes | `.cache/` | No (`.gitignore`) |
 | Tu configuración (nombres de módulos, categorías de notas) | `src/config/*.local.js` | No (`.gitignore`) |
 | Idioma, tema y tamaño de página | `localStorage` de tu navegador | No |
+| Versión web: la carpeta elegida y los datos procesados (lo que sería `.cache/`) | Almacenamiento privado del navegador para ese sitio (IndexedDB y OPFS) | No (y tampoco sale de tu navegador) |
 
 Del repositorio solo se versiona un `.gitkeep` en `reports/` y `notes/`, para que las carpetas existan al clonar. Cada persona pone ahí sus propios reportes y notas.
 
@@ -230,7 +236,8 @@ El `.exe` solo contiene la aplicación. Tus reportes, tus notas y la caché se l
 
 La app solo acepta conexiones desde tu propio equipo (`127.0.0.1` / `localhost`): nadie puede abrirla desde otro ordenador de la red.
 
-⚠️ Los reportes de Playwright pueden contener datos sensibles: capturas de pantalla, stdout, URLs internas o datos de prueba. La app está pensada para **uso local**, así que no la publiques en un servidor accesible desde fuera.
+⚠️ Los reportes de Playwright pueden contener datos sensibles: capturas de pantalla, stdout, URLs internas o datos de prueba. La app está pensada para **uso local**, así que no la publiques (con tus reportes) en un servidor accesible desde fuera.
+La [versión web](#versión-web-en-el-navegador) sí se publica, pero sin datos: es solo la aplicación, y los reportes de cada persona los lee su propio navegador.
 
 ## Personalización
 
@@ -288,6 +295,7 @@ $env:PLAYBOARD_TZ="Europe/Madrid"; npm run dev  # Windows PowerShell
 | `npm run ingest` | Procesa los reportes sin arrancar la app |
 | `npm run build` + `npm start` | Compila la app y la sirve sin Vite en http://localhost:4174 |
 | `npm run build:exe` | Genera el ejecutable autocontenido (ver abajo) |
+| `npm run build:web` + `npm run preview:web` | Compila la versión web en `dist-web/` y la sirve como lo haría GitHub Pages en http://localhost:4175 |
 | `npm run lint` | ESLint |
 
 ## Ejecutable (sin instalar nada)
@@ -330,11 +338,52 @@ Comparte la carpeta entera (o un zip de ella). Al abrir el ejecutable se abre el
 - Si actualizas el proyecto, vuelve a ejecutar el comando: solo se sustituyen el ejecutable y el `README.txt`, y lo que hay en `reports/`, `notes/` y `.cache/` se conserva. Cierra antes el ejecutable si está abierto. Si ya lo habías copiado a otro sitio, basta con cambiar el `.exe` por el nuevo. Si no cambias nada, el mismo ejecutable sigue sirviendo.
 - Windows puede mostrar un aviso de SmartScreen la primera vez, porque el ejecutable no está firmado («Más información» → «Ejecutar de todas formas»).
 
+## Versión web (en el navegador)
+
+**https://danico9.github.io/playboard-report/** — la misma app, sin instalar nada y sin servidor que guarde tus datos.
+
+1. Abre la página en **Chrome o Edge** y pulsa **Elegir carpeta…**. Elige la carpeta que contiene `reports/` (tus reportes en `reports/playwright-reports/`) y, si quieres, `notes/`. También vale la propia `reports/`, pero entonces no hay notas.
+2. Acepta el permiso del navegador para leer y modificar esa carpeta. Solo se escriben tus marcas «Comprobado» y los nombres de los entornos (`reports/reviews.json` y `reports/environments.json`), igual que en la app de escritorio.
+3. La primera vez se procesan todos los reportes (lo mismo que tarda `npm run ingest` desde cero). Después solo los nuevos, en unos segundos.
+
+**Qué carpeta elegir.** La app busca `reports/` y `notes/` **directamente dentro** de la carpeta que eliges (la pantalla de bienvenida lo muestra con ejemplos):
+
+```
+pruebas-app/                 ← elige esta
+├── reports/
+│   └── playwright-reports/
+│       ├── 2026-09-23_…/    ← un reporte (index.html + data/)
+│       └── 2026-09-24_…/
+└── notes/                   ← opcional, al lado de reports/
+```
+
+- ✓ También vale elegir la propia `reports/`, pero entonces no se ven las notas (el navegador no deja subir a la carpeta de arriba).
+- ✕ Si `reports/` y `notes/` están en una subcarpeta (`pruebas-app/prueba2/reports/`), elige esa subcarpeta (`prueba2`).
+- ! Si `notes/` está dentro de `reports/`, se ven los reportes pero no las notas: ponla al lado.
+- ✕ Los reportes tienen que estar en `reports/playwright-reports/`, no sueltos en `reports/`. Los zips del CI hay que descomprimirlos ahí (en la app de escritorio lo hace «Importar»).
+
+¿Solo quieres verla? Pulsa **Ver con datos de ejemplo**: carga los datos de `npm run demo` y funciona en cualquier navegador.
+
+**Tus reportes no se suben a ningún sitio.** La página solo entrega la aplicación: tu navegador lee los reportes de tu disco y guarda lo ya procesado en su almacenamiento privado para ese sitio (se borra desde los ajustes del navegador, en los datos del sitio). Cuando la usas, en el menú aparece la marca **Web** y, abajo, la carpeta que estás viendo con los botones **Recargar datos** y **Cambiar carpeta**.
+
+Diferencias con la app de escritorio:
+
+| | App de escritorio (`npm run dev`, ejecutable) | Versión web |
+|---|---|---|
+| Navegadores | Cualquiera | Chrome y Edge (otros navegadores, solo los datos de ejemplo) |
+| Reportes nuevos | Se detectan solos | Botón **Recargar datos** |
+| Importar zips del CI | Sí | No: descomprime los artefactos en `reports/playwright-reports/` |
+| Tu configuración (`*.local.js`) | Sí (salvo el ejecutable genérico) | No: módulos y notas con la configuración genérica |
+| Permiso de la carpeta | — | El navegador la recuerda, pero pide permiso de nuevo en cada sesión |
+
+Para publicarla en tu propio fork: activa GitHub Pages en *Settings › Pages › Source: GitHub Actions*. El workflow `.github/workflows/pages.yml` la compila y la publica en cada push a `master`. En local: `npm run build:web` y `npm run preview:web`.
+
 ## Cómo funciona
 
 1. `scripts/ingest-reports.mjs` extrae los datos que el `index.html` de Playwright lleva embebidos y los normaliza en `.cache/data/`.
 2. `server/api.mjs` sirve esos datos, las notas y las capturas mediante una pequeña API local, y avisa al navegador de los cambios en `reports/` y `notes/`. Lo usan tanto el plugin de Vite (`npm run dev`) como el servidor del ejecutable (`server/standalone.mjs`).
 3. La interfaz es una SPA de React 19 con React Router y Recharts.
+4. En la versión web no hay servidor: un *service worker* (`web/sw.js`) ejecuta ese mismo `server/api.mjs` dentro del navegador, sobre la carpeta que eliges.
 
 Más detalle en [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 

@@ -14,6 +14,7 @@ import { t } from '../i18n'
 import { IssueBadge } from '../components/KnownIssues'
 import { ReviewToggle } from '../components/Review'
 import { isReviewable, useReviews, verdictOf } from '../lib/reviews'
+import { appUrl } from '../lib/webMode'
 
 const SEVERITY = { failed: 0, flaky: 1, skipped: 2, passed: 3 }
 const DEFAULT_STATUSES = ['failed']
@@ -153,12 +154,12 @@ export default function RunDetail() {
         <div className="row wrap">
           {prev && <Link className="btn" to={runLink(prev)} title={`${prev.date} ${prev.time}`}>◀ {t('Anterior')}</Link>}
           {next && <Link className="btn" to={runLink(next)} title={`${next.date} ${next.time}`}>{t('Siguiente')} ▶</Link>}
-          <a className="btn" href={`/ejecucion/${encodeURIComponent(run.id)}/informe${mod ? `?mod=${encodeURIComponent(mod)}` : ''}`} target="_blank" rel="noreferrer"
+          <a className="btn" href={appUrl(`/ejecucion/${encodeURIComponent(run.id)}/informe${mod ? `?mod=${encodeURIComponent(mod)}` : ''}`)} target="_blank" rel="noreferrer"
             title={t('Informe para imprimir o guardar como PDF: los fallidos con todo su detalle y el resto en listas')}>
             🖶 {t('Informe / PDF')}
           </a>
           {run.buildHref && <a className="btn"href={run.buildHref} target="_blank" rel="noreferrer">{t('Job del CI')} ↗</a>}
-          <a className="btn primary" href={`/reports/playwright-reports/${encodeURIComponent(run.id)}/index.html`} target="_blank" rel="noreferrer">{t('Reporte original de Playwright')} ↗</a>
+          <a className="btn primary" href={appUrl(`/reports/playwright-reports/${encodeURIComponent(run.id)}/index.html`)} target="_blank" rel="noreferrer">{t('Reporte original de Playwright')} ↗</a>
         </div>
       </div>
 

@@ -14,12 +14,14 @@ import Import from './pages/Import'
 import Environments from './pages/Environments'
 import { Empty } from './components/ui'
 import { t, useLang } from './i18n'
+import WebGate from './components/Welcome'
+import { ROUTER_BASENAME, WEB_MODE } from './lib/webMode'
 
 export default function App() {
   // Al cambiar de idioma se vuelve a montar todo para que cada t() use el nuevo idioma (la URL se conserva)
   const lang = useLang()
-  return (
-    <BrowserRouter key={lang}>
+  const app = (
+    <BrowserRouter key={lang} basename={ROUTER_BASENAME}>
       <Routes>
         {/* Informe imprimible: sin menú lateral */}
         <Route path="ejecucion/:id/informe" element={<RunReport />} />
@@ -40,4 +42,6 @@ export default function App() {
       </Routes>
     </BrowserRouter>
   )
+  // Versión web: primero hay que elegir la carpeta de los reportes (o ver los datos de ejemplo)
+  return WEB_MODE ? <WebGate>{app}</WebGate> : app
 }

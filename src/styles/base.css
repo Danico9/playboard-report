@@ -509,3 +509,39 @@ details.fold[open] > summary { margin-bottom: 8px; }
   .table tbody tr:hover { background: transparent; }
   a { color: inherit; }
 }
+
+/* ─── Versión web: carpeta de datos (pie del menú) y pantalla de bienvenida ─── */
+.web-folder { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+.web-folder span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.web-folder .btn { justify-content: center; }
+
+.welcome { min-height: 100vh; display: flex; justify-content: center; padding: 48px 16px; background: var(--bg); }
+.welcome-inner { width: 100%; max-width: 760px; display: flex; flex-direction: column; gap: 18px; }
+.welcome-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.welcome-top .brand { padding: 0; }
+.welcome-top .lang-toggle, .welcome-top .theme-toggle { width: auto; margin: 0; }
+.welcome h1 { margin: 8px 0 0; font-size: 26px; }
+.welcome .lead { margin: 0; color: var(--text-2); font-size: 15px; line-height: 1.55; }
+.welcome-actions { display: flex; flex-direction: column; gap: 12px; }
+.welcome-actions .row .btn { padding: 9px 14px; }
+.welcome-error { padding: 10px 12px; border-radius: 8px; background: var(--failed-soft); color: var(--failed-text); }
+.welcome h2 { margin: 6px 0 0; font-size: 16px; }
+.welcome ol, .welcome ul { margin: 0; padding-left: 20px; color: var(--text-2); line-height: 1.6; }
+.welcome li + li { margin-top: 4px; }
+.web-badge {
+  margin-right: 6px; padding: 0 6px; border-radius: 999px;
+  background: var(--accent-soft); border: 1px solid var(--accent-border); color: var(--text); font-size: 10px; font-weight: 700;
+}
+.folder-guide { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 12px; }
+.folder-example { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border: 1px solid var(--border); border-left-width: 3px; border-radius: var(--radius); background: var(--surface); min-width: 0; }
+.folder-example.ok { border-left-color: var(--passed); }
+.folder-example.partial { border-left-color: var(--flaky); }
+.folder-example.no { border-left-color: var(--failed); }
+.folder-example-head { display: flex; align-items: center; gap: 8px; }
+.folder-example-icon { flex: none; width: 20px; height: 20px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+.folder-example.ok .folder-example-icon { background: var(--passed-soft); color: var(--passed-text); }
+.folder-example.partial .folder-example-icon { background: var(--flaky-soft); color: var(--flaky-text); }
+.folder-example.no .folder-example-icon { background: var(--failed-soft); color: var(--failed-text); }
+.folder-tree { margin: 0; padding: 10px 12px; border-radius: 8px; background: var(--surface-2); font-family: var(--mono); font-size: 12px; line-height: 1.55; overflow-x: auto; white-space: pre; }
+.folder-tree .dir { color: var(--text); font-weight: 600; }
+.folder-tree .note { color: var(--accent); font-family: inherit; }

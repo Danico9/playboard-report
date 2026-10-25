@@ -16,6 +16,9 @@ reports/*.zip ──(pantalla Importar)──▶ reports/playwright-reports/<id>
                                     App React (src/) ◀── notes/**/*.md
 ```
 
+En la versión web (`npm run build:web`) no hay servidor: el mismo `server/api.mjs`, con la ingesta, se ejecuta en un *service worker* del navegador
+sobre la carpeta que elige el usuario (ver [Versión web](#versión-web-web-npm-run-buildweb)).
+
 ## De dónde salen los datos
 
 El `index.html` del reporter HTML de Playwright lleva los resultados **embebidos** como un zip en base64:
@@ -125,6 +128,46 @@ Configuración local (`src/config/*.local.js`):
 - La opción llega como argumento o, si PowerShell se come el `--`, como configuración de npm (`npm_config_local_config` vacía o `false`): se aceptan las dos.
   Cualquier otro argumento, o una variable `npm_config_*local_conf*` con otro nombre (una errata), detiene el script sin generar nada. Al terminar, avisa de qué tipo de ejecutable ha generado.
 
+## Versión web (`web/`, `npm run build:web`)
+
+Una web estática (GitHub Pages) que funciona igual que la app de escritorio sin servidor ni datos propios: cada usuario elige su carpeta y todo ocurre en su navegador.
+
+```
+GitHub Pages ── solo ficheros: app, sw.js, trace-viewer/, demo.zip
+       │
+Navegador ── App React (src/, VITE_PLAYBOARD_WEB) ──fetch <base>/api/*, <base>/reports/**──▶ service worker (web/sw.js)
+                                                                                                │
+                              server/api.mjs + ingesta, con node:fs → web/shims/fs.js (en memoria)
+                                                                                                │
+             carpeta del usuario (File System Access API)  +  caché en OPFS («.cache/data»)  +  la carpeta elegida en IndexedDB
+```
+
+- **`web/sw.js`**: responde a `<base>/api/*` ejecutando el **middleware real** de `server/api.mjs` (adapta `Request`/`Response` a los `req`/`res` de Node),
+  y a `<base>/reports/**` leyendo el fichero de la carpeta (con `Range`, para los vídeos). Añade `/api/web/reload` (vuelve a leer la carpeta), contesta `204` a `/api/events`
+  (no hay avisos en vivo) y `[]` a `/api/zips` (no hay «Importar»). Las navegaciones a rutas de la app devuelven siempre el `index.html`.
+- **`web/shims/`**: `rolldown` empaqueta el service worker cambiando `node:fs`, `node:path` y `node:url` por estos sustitutos. `fs.js` es un sistema de ficheros
+  **síncrono en memoria**: antes de procesar se carga de la carpeta (`reports/*.json`, solo el tamaño y la fecha de cada `index.html`, `notes/**/*.md` y la caché de OPFS)
+  y de los `index.html` solo se leen los nuevos o cambiados (misma marca `tamaño:fecha` que la ingesta). Al terminar, `flush()` escribe en la carpeta o en OPFS lo que haya cambiado.
+  `process.env` (con `PLAYBOARD_ROOT=/data`) y `Buffer.from(base64)` se definen en la cabecera del bundle.
+- **`web/folder.js`**: la carpeta elegida se guarda en IndexedDB (`{ kind: 'folder', handle }` o `{ kind: 'opfs', name }` para los datos de ejemplo), donde la leen la página y el
+  service worker. Vale la carpeta que contiene `reports/` (y `notes/`) o la propia `reports/`. El permiso solo se puede pedir desde la página.
+- **Cliente** (`src/lib/webMode.js`, `src/components/Welcome.jsx`): `WEB_MODE` (`VITE_PLAYBOARD_WEB`), `appUrl()` (todas las URLs absolutas de la app pasan por ella:
+  GitHub Pages sirve la app en `/<repositorio>/`; en la app normal la base es `/` y no cambia nada) y el estado de la carpeta (`useWebGate()`).
+  `App.jsx` envuelve el router en `<WebGate>`: hasta que hay datos se ve la bienvenida (elegir carpeta, seguir con la de la última vez o ver los datos de ejemplo),
+  con ejemplos de qué carpeta elegir (`components/FolderGuide.jsx`: árboles de carpetas que funcionan, a medias o no). Al leer otra carpeta, `onFolderLoaded()` avisa a `store.js`,
+  que vacía su caché para que no se vean datos de la anterior, y «Cambiar carpeta» vuelve a la raíz de la app.
+  En `Layout` aparecen la marca **Web**, la carpeta con «Recargar datos» y «Cambiar carpeta», y no aparece «Importar». `store.js` no abre `EventSource`.
+- **Descargas y trazas**: Chrome no pasa las descargas por el service worker y el visor de trazas de cada reporte registra su propio service worker (que no existe sin servidor).
+  En modo web, «Descargar trace» descarga un `blob:` y «Abrir trace» abre el visor oficial de Playwright publicado en `trace-viewer/` (copiado de `playwright-core`
+  al compilar, con su licencia) y le pasa la traza con `postMessage({ method: 'load', params: { trace: Blob } })` cuando avisa con `{ method: 'ready' }`.
+- **`scripts/build-web.mjs`**: `vite build` con `VITE_PLAYBOARD_WEB=1` y `VITE_PLAYBOARD_NO_LOCAL=1` (sin `*.local.js`) y la base de `--base` o `PLAYBOARD_WEB_BASE`;
+  el service worker; el visor de trazas; `demo.zip` (los reportes y notas de `.demo/`, que la bienvenida copia a OPFS con «Ver con datos de ejemplo»; con ellos se usan los nombres de
+  módulo de la demo, `setDemoModuleNames()`); `404.html` (copia del `index.html`, para los enlaces directos antes de que haya service worker) y `.nojekyll`.
+  `scripts/serve-web.mjs` (`npm run preview:web`) sirve `dist-web/` como GitHub Pages. `.github/workflows/pages.yml` la publica en cada push a `master`.
+- **Requisito para el código de `server/` y de la ingesta**: solo pueden usar las funciones de `fs` que implementa `web/shims/fs.js` (`existsSync`, `readFileSync`, `writeFileSync`,
+  `renameSync`, `rmSync`, `mkdirSync`, `readdirSync`, `statSync`, `createReadStream`, `watch`), `path` POSIX y nada más de Node fuera de las ramas que la web no usa
+  (importar zips, `standalone.mjs`). Si se usa algo nuevo, hay que añadirlo al sustituto y probar `npm run build:web`.
+
 ## Variables de entorno
 
 | Variable | Uso |
@@ -134,7 +177,9 @@ Configuración local (`src/config/*.local.js`):
 | `PLAYBOARD_ROOT` | Raíz de datos y caché. La fija el ejecutable (su propia carpeta) |
 | `PLAYBOARD_PORT` | Puerto del servidor de `npm start` y del ejecutable (por defecto 4174) |
 | `VITE_PLAYBOARD_DEMO` | La pone `npm run demo`: ignora los `*.local.js` y usa los nombres de módulo de la demo |
-| `VITE_PLAYBOARD_NO_LOCAL` | La pone `build:exe:generic`: compila sin los `*.local.js` |
+| `VITE_PLAYBOARD_NO_LOCAL` | La ponen `build:exe:generic` y `build:web`: compila sin los `*.local.js` |
+| `VITE_PLAYBOARD_WEB` | La pone `build:web`: versión web (bienvenida, service worker, sin «Importar») |
+| `PLAYBOARD_WEB_BASE` | Base de la versión web (p. ej. `playboard-report`), si no se pasa `--base` |
 
 ## Datos de demostración
 

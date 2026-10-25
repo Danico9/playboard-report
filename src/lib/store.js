@@ -4,6 +4,7 @@
 import { useEffect, useMemo, useSyncExternalStore } from 'react'
 import { parseKnownIssues } from './knownIssues'
 import { KNOWN_ISSUES_NOTE } from '../config/notes'
+import { WEB_MODE, appUrl, onFolderLoaded } from './webMode'
 
 const cache = new Map()
 const listeners = new Set()
@@ -17,7 +18,7 @@ function load(url, type) {
   const prev = cache.get(url)
   cache.set(url, { status: prev?.data !== undefined ? 'refreshing' : 'loading', data: prev?.data, type })
   emit()
-  fetch(url)
+  fetch(appUrl(url))
     .then((r) => {
       if (!r.ok) throw new Error(`${r.status} ${r.statusText}`)
       return type === 'text' ? r.text() : r.json()
@@ -40,15 +41,19 @@ function invalidate(prefix) {
   for (const [url, entry] of cache) if (url.startsWith(prefix)) load(url, entry.type)
 }
 
-// Avisos del servidor cuando cambian reports/ o notes/ (funciona igual con npm run dev y con el ejecutable)
-if (typeof EventSource !== 'undefined') {
-  const events = new EventSource('/api/events')
+// Avisos del servidor cuando cambian reports/ o notes/ (funciona igual con npm run dev y con el ejecutable).
+// En la versión web no hay servidor que avise: los datos se recargan con «Recargar datos».
+if (typeof EventSource !== 'undefined' && !WEB_MODE) {
+  const events = new EventSource(appUrl('/api/events'))
   events.addEventListener('playboard:data', () => refreshData())
   events.addEventListener('playboard:notes', () => invalidate('/api/notes'))
   events.addEventListener('playboard:zips', () => invalidate('/api/zips'))
   events.addEventListener('playboard:reviews', () => refreshReviews())
   import.meta.hot?.dispose(() => events.close())
 }
+
+// Versión web: al leer otra carpeta se olvida todo lo cargado de la anterior (la app se vuelve a montar después)
+onFolderLoaded(() => cache.clear())
 
 export const useSummary = () => useResource('/api/summary')
 export const useRunDetail = (id) => useResource(id ? `/api/runs/${encodeURIComponent(id)}` : null)
@@ -57,6 +62,8 @@ export const useZips = () => useResource('/api/zips')
 export const useInfo = () => useResource('/api/info')
 export const refreshZips = () => invalidate('/api/zips')
 export const refreshReviews = () => invalidate('/api/reviews')
+// Todo lo cargado de la API (versión web, al releer la carpeta)
+export const refreshAll = () => invalidate('/api/')
 export function refreshData() {
   for (const url of [...cache.keys()]) if (url.startsWith('/api/runs/')) cache.delete(url)
   invalidate('/api/summary')

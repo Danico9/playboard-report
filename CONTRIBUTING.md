@@ -39,7 +39,9 @@ npm run demo
 ### Datos y configuración
 
 - Si cambia el formato de `.cache/data/`, sube `SCHEMA_VERSION` en `scripts/ingest-reports.mjs`.
-- La API vive solo en `server/api.mjs` (la usan `npm run dev` y el ejecutable). Si la cambias, prueba también el ejecutable con `npm run build:exe`.
+- La API vive solo en `server/api.mjs` (la usan `npm run dev`, el ejecutable y, dentro del navegador, la versión web). Si la cambias, prueba también el ejecutable con `npm run build:exe` y la versión web con `npm run build:web` + `npm run preview:web`.
+- La versión web ejecuta `server/` y la ingesta en un service worker, con `node:fs` sustituido por `web/shims/fs.js`: usa solo las funciones de `fs` que implementa (ver `docs/ARCHITECTURE.md`) o añádelas allí.
+- Toda URL absoluta de la app (`/api/…`, `/reports/…`, un enlace que se abre en otra pestaña) pasa por `appUrl()` (`src/lib/webMode.js`): en GitHub Pages la app no está en la raíz.
 - `server/` y `scripts/ingest-reports.mjs` se empaquetan en CommonJS para el ejecutable: nada de `import.meta` fuera de ramas que solo corran sin `PLAYBOARD_ROOT`, ni top-level `await` en `server/`.
 - Toda ruta de fichero que llegue a la API se valida para no salir de su carpeta. Las acciones que modifican datos van por `POST` con la cabecera `x-playboard: 1`.
 - Lo que el usuario decide desde la interfaz y tiene que durar se guarda en `reports/` (hoy `reports/environments.json` y `reports/reviews.json`), nunca en `.cache/`, que se puede borrar y regenerar.
@@ -59,7 +61,7 @@ npm run demo
 3. Colores con tokens válidos en modo oscuro y claro.
 4. Nada de datos de tu suite, tu empresa o personales en ficheros versionados.
 5. La demo sigue funcionando y muestra lo nuevo (`npm run demo:fresh`).
-6. `npm run lint` y `npm run build` sin errores.
+6. `npm run lint`, `npm run build` y `npm run build:web` sin errores.
 7. Probado en el navegador en castellano e inglés, y en modo oscuro y claro.
 8. Documentación al día: `README.md` (usuarios) y `docs/ARCHITECTURE.md` (técnica); capturas si cambia algo visible de forma notable.
 9. Mensajes de commit en formato [Conventional Commits](https://www.conventionalcommits.org/es/) (`feat:`, `fix:`, `docs:`…).

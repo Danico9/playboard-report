@@ -10,6 +10,7 @@ import { paginate, usePagination } from '../lib/usePagination'
 import { t } from '../i18n'
 import { EnvChip } from '../components/Environments'
 import { hasEnvironments } from '../lib/environments'
+import { appUrl } from '../lib/webMode'
 
 export default function Runs() {
   const { res, summary, period, setPeriod, runs } = useReport()
@@ -61,7 +62,7 @@ export default function Runs() {
                         {r.commit ? <><span className="mono">{r.commit.short}</span> <span className="muted">{r.commit.subject}</span></> : '—'}
                       </td>
                       <td className="nowrap" onClick={(e) => e.stopPropagation()}>
-                        <a className="small" href={`/reports/playwright-reports/${encodeURIComponent(r.id)}/index.html`} target="_blank" rel="noreferrer">{t('Reporte original')} ↗</a>
+                        <a className="small" href={appUrl(`/reports/playwright-reports/${encodeURIComponent(r.id)}/index.html`)} target="_blank" rel="noreferrer">{t('Reporte original')} ↗</a>
                       </td>
                     </tr>
                   )

@@ -46,6 +46,9 @@ src/config/*.local.js
 # Instrucciones personales para Claude Code
 /CLAUDE.md
 
+# Versión web (npm run build:web)
+dist-web/
+
 # Ejecutable (npm run build:exe)
 build/
 release/

@@ -1,9 +1,11 @@
+import { useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router'
 import { periodSearch } from '../lib/usePeriod'
-import { pendingZips, useSummary, useZips } from '../lib/store'
+import { pendingZips, refreshAll, useSummary, useZips } from '../lib/store'
 import { hasEnvironments, pendingEnvironments } from '../lib/environments'
 import { fmtDate, plural } from '../lib/format'
 import { setTheme, useTheme } from '../lib/theme'
+import { WEB_MODE, appUrl, changeFolder, reloadData, useWebGate } from '../lib/webMode'
 import { setLang, t, useLang } from '../i18n'
 
 const I = {
@@ -35,6 +37,35 @@ const REPORT_LINKS = [
   ['/modulos', 'Módulos', 'modules'],
 ]
 
+// Versión web: carpeta de la que se leen los datos, para releerla (reportes nuevos) o cambiarla
+function WebFolder() {
+  const { folder } = useWebGate()
+  const [busy, setBusy] = useState(false)
+  if (!folder) return null
+  const reload = async () => {
+    setBusy(true)
+    try {
+      await reloadData()
+      refreshAll()
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <div className="web-folder">
+      <span className="small text-2" title={folder.kind === 'opfs' ? t('Datos de ejemplo guardados en este navegador') : t('Carpeta de tu ordenador')}>
+        📁 {folder.kind === 'opfs' ? t('Datos de ejemplo') : folder.name}
+      </span>
+      <button className="btn" onClick={reload} disabled={busy} title={t('Vuelve a leer la carpeta para ver los reportes nuevos')}>
+        {busy ? t('Leyendo…') : `↻ ${t('Recargar datos')}`}
+      </button>
+      <button className="btn" onClick={() => window.confirm(t('¿Dejar de usar esta carpeta y elegir otra? No se borra nada de ella.')) && changeFolder()}>
+        {t('Cambiar carpeta')}
+      </button>
+    </div>
+  )
+}
+
 export default function Layout() {
   const location = useLocation()
   const search = periodSearch(location.search)
@@ -49,8 +80,15 @@ export default function Layout() {
     <div className="app">
       <aside className="sidebar">
         <div className="brand">
-          <img src="/favicon.svg" alt="" />
-          <div>playboard-report<small>{t('Reportes de Playwright')}</small></div>
+          <img src={appUrl('/favicon.svg')} alt="" />
+          <div>
+            playboard-report
+            <small>
+              {/* Que se vea siempre si es la versión web (en el navegador) o la app de escritorio */}
+              {WEB_MODE && <span className="web-badge" title={t('Versión web: los datos se leen de una carpeta de tu ordenador desde el navegador, sin servidor')}>{t('Web')}</span>}
+              {t('Reportes de Playwright')}
+            </small>
+          </div>
         </div>
         <div className="nav-group">{t('Reportes')}</div>
         {REPORT_LINKS.map(([to, label, icon]) => (
@@ -64,9 +102,12 @@ export default function Layout() {
             {newEnvs > 0 && <span className="badge" title={t('{n} entornos nuevos sin nombre', { n: newEnvs })}>{newEnvs}</span>}
           </NavLink>
         )}
-        <NavLink to="/importar" className="nav-link">
-          <Icon name="import" />{t('Importar')}{pending > 0 && <span className="badge" title={t('{n} zips pendientes', { n: pending })}>{pending}</span>}
-        </NavLink>
+        {/* Importar mueve y borra ficheros del usuario: no está en la versión web */}
+        {!WEB_MODE && (
+          <NavLink to="/importar" className="nav-link">
+            <Icon name="import" />{t('Importar')}{pending > 0 && <span className="badge" title={t('{n} zips pendientes', { n: pending })}>{pending}</span>}
+          </NavLink>
+        )}
         <div className="nav-group">{t('Documentación')}</div>
         <NavLink to="/notas" className="nav-link"><Icon name="notes" />{t('Notas')}</NavLink>
         <div className="sidebar-foot">
@@ -81,6 +122,7 @@ export default function Layout() {
           >
             {theme === 'dark' ? `☀ ${t('Modo claro')}` : `☾ ${t('Modo oscuro')}`}
           </button>
+          {WEB_MODE && <WebFolder />}
           {data && (
             <>
               {plural(data.runs.length, 'ejecución', 'ejecuciones')}

@@ -40,6 +40,11 @@ http.createServer((req, res) => {
     }
   }
   send(res, path.join(DIST, '404.html'), 404)
+}).on('error', (e) => {
+  if (e.code !== 'EADDRINUSE') throw e
+  // Lo más probable: ya está abierta (sirve lo que haya en dist-web/, así que basta con recargar el navegador)
+  console.error(`[web] El puerto ${PORT} ya está en uso: ¿ya tienes abierto npm run preview:web? Recarga http://localhost:${PORT}${base} o usa otro puerto con PORT=<n>.`)
+  process.exit(1)
 }).listen(PORT, () => {
   const url = `http://localhost:${PORT}${base}`
   console.log(`[web] ${url}`)

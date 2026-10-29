@@ -6,10 +6,10 @@
 
 import * as vfs from './shims/fs.js'
 import { createApi, MIME } from '../server/api.mjs'
-import { extractZip } from '../scripts/ingest-reports.mjs'
 import { cacheName, getRoot, resolveFolders, rootDirectory } from './folder.js'
 
 const ROOT = '/data' // rutas «de disco» que ve el código del servidor (PLAYBOARD_ROOT, ver scripts/build-web.mjs)
+const REPORTS = `${ROOT}/reports`
 const BASE = new URL(self.registration.scope).pathname // «/» o «/playboard-report/» en GitHub Pages
 let state = null // { api, timings, logs } de la carga actual
 let loading = null
@@ -40,11 +40,12 @@ async function boot() {
   if (notes) vfs.mount(`${ROOT}/notes`, notes)
   vfs.mount(`${ROOT}/.cache`, cache)
 
-  // reports/: los .json de la raíz y solo el index.html de cada reporte (los adjuntos se sirven aparte, al pedirlos)
-  await vfs.load(`${ROOT}/reports`, (rel, kind) => {
+  // reports/: los .json de la raíz, solo el index.html de cada reporte (los adjuntos se sirven aparte, al pedirlos)
+  // y, para «Importar», los zips y carpetas sueltas
+  await vfs.load(REPORTS, (rel, kind) => {
     const parts = rel.split('/')
-    if (parts.length === 1) return kind === 'file' ? (rel.endsWith('.json') ? 'content' : 'skip') : rel === 'playwright-reports' ? 'stat' : 'skip'
-    if (parts[0] !== 'playwright-reports') return 'skip'
+    if (parts[0] !== 'playwright-reports') return parts.length === 1 && kind === 'file' && rel.endsWith('.json') ? 'content' : looseEntry(rel, kind)
+    if (parts.length === 1) return 'stat'
     if (parts.length === 2) return kind === 'directory' ? 'stat' : 'skip'
     return parts.length === 3 && parts[2] === 'index.html' ? 'stat' : 'skip'
   })
@@ -76,6 +77,49 @@ async function boot() {
   vfs.dropContents(`${runsDir}/`) // los index.html ya procesados no hacen falta en memoria
   const timings = { runs: ids.length, parsed: stale.length, readMs: Math.round(t.read - t.start), totalMs: Math.round(performance.now() - t.start) }
   return { api, timings, logs }
+}
+
+// Zips y carpetas sueltas de reports/ (lo que lista «Importar»): de los zips basta con el tamaño y la fecha (se leen
+// al listarlos o importarlos); de las carpetas, todos sus ficheros, porque al importarlas se mueven, y el index.html entero
+function looseEntry(rel, kind) {
+  const parts = rel.split('/')
+  if (parts.some((p) => p.startsWith('.'))) return 'skip'
+  if (parts.length === 1 && kind === 'file') return rel.toLowerCase().endsWith('.zip') ? 'stat' : 'skip'
+  return kind === 'file' && parts.at(-1) === 'index.html' ? 'content' : 'stat'
+}
+
+const isLoose = (name) => name !== 'playwright-reports' && !name.endsWith('.json')
+
+// Sin avisos del disco: antes de listar o importar se vuelve a mirar qué hay suelto en reports/ y se leen los zips
+async function loadLoose() {
+  for (const name of vfs.readdirSync(REPORTS)) if (isLoose(name)) vfs.forget(`${REPORTS}/${name}`)
+  await vfs.load(REPORTS, (rel, kind) => (isLoose(rel.split('/')[0]) ? looseEntry(rel, kind) : 'skip'))
+  for (const name of vfs.readdirSync(REPORTS)) if (name.toLowerCase().endsWith('.zip')) await vfs.loadContent(`${REPORTS}/${name}`)
+}
+
+// «Añadir zips»: el zip elegido en el navegador se copia en reports/ y aparece en «Importar» como los demás
+async function addZip(request) {
+  const name = new URL(request.url).searchParams.get('name') ?? ''
+  if (request.method !== 'POST' || request.headers.get('x-playboard') !== '1' || !/^[^/\\]+\.zip$/i.test(name) || name.startsWith('.')) {
+    return new Response('Petición no permitida', { status: 403 })
+  }
+  const { reports } = await folders()
+  // Si ya hay uno con ese nombre se guarda como «nombre (2).zip»
+  const exists = (n) => reports.getFileHandle(n).then(() => true, () => false)
+  let target = name
+  for (let n = 2; await exists(target); n++) target = name.replace(/\.zip$/i, ` (${n}).zip`)
+  const w = await (await reports.getFileHandle(target, { create: true })).createWritable()
+  await w.write(await request.blob())
+  await w.close()
+  return json({ name: target })
+}
+
+// Las rutas de /api/info son las de dentro del service worker (/data/…): se muestran con el nombre de la carpeta elegida
+async function folderLabels() {
+  const { root, reports, notes } = await folders()
+  const dir = await rootDirectory(root)
+  const base = (await dir.isSameEntry(reports)) ? dir.name : `${dir.name}/reports`
+  return { reportsDir: base, runsDir: `${base}/playwright-reports`, notesDir: notes ? `${dir.name}/notes` : null }
 }
 
 function ensureState() {
@@ -144,24 +188,6 @@ async function serveReportFile(request, rel) {
   }
 }
 
-// Un zip elegido en el navegador: sus reportes se descomprimen en reports/playwright-reports/ de la carpeta del usuario
-// (solo se añaden carpetas nuevas; el zip no se toca). Después se vuelve a leer la carpeta para que entren en el dashboard.
-async function importZip(request) {
-  if (request.method !== 'POST' || request.headers.get('x-playboard') !== '1') return new Response('Petición no permitida', { status: 403 })
-  const name = new URL(request.url).searchParams.get('name') || 'zip'
-  await ensureState()
-  const logs = []
-  let result
-  try {
-    result = extractZip(name, new Uint8Array(await request.arrayBuffer()), (m) => logs.push(m))
-    await vfs.flush()
-  } catch (e) {
-    result = { file: name, kind: 'zip', error: e.message, imported: [], alreadyImported: [], failed: [] }
-  }
-  state = null // la siguiente petición vuelve a cargar la carpeta y procesa los reportes nuevos
-  return json({ ...result, kind: 'upload' })
-}
-
 const json = (data, status = 200) => new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json; charset=utf-8' } })
 
 async function handle(request, path) {
@@ -174,15 +200,18 @@ async function handle(request, path) {
       await ensureState()
       return json(state.timings)
     }
-    // La lista de «Importar» (zips y carpetas sueltas en reports/) es de la app de escritorio, que los mueve y borra.
-    // En la web el usuario elige los zips en el navegador y se suben de uno en uno a /api/web/import-zip
-    if (path === '/api/zips') return json([])
-    if (path === '/api/zips/import') return new Response('En la versión web los zips se importan con /api/web/import-zip', { status: 501 })
-    if (path === '/api/web/import-zip') return await importZip(request)
+    if (path === '/api/web/add-zip') return await addZip(request)
     if (path.startsWith('/reports/')) return await serveReportFile(request, path.slice('/reports/'.length))
     await ensureState()
+    if (path === '/api/info') return json({ ...(await (await runMiddleware(request, path)).json()), ...(await folderLabels()) })
+    // «Importar», igual que en la app de escritorio: lista y procesa los zips y carpetas sueltas de reports/
+    const importing = path === '/api/zips/import'
+    if (path === '/api/zips' || importing) await loadLoose()
     const res = await runMiddleware(request, path)
     await vfs.flush()
+    vfs.dropContents(`${REPORTS}/`)
+    // Tras importar se han movido y borrado ficheros: la siguiente petición vuelve a leer la carpeta
+    if (importing) state = null
     return res
   } catch (e) {
     if (e instanceof NeedsFolder) return json({ needsFolder: true, error: e.message }, 409)

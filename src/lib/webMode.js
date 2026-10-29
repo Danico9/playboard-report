@@ -145,15 +145,17 @@ export async function reloadData() {
   setGate({ ...gate, timings: await r.json() })
 }
 
-// «Importar» en la web: el service worker descomprime el zip en reports/playwright-reports/ de la carpeta elegida
-export async function importZipFile(file) {
-  const r = await fetch(appUrl(`api/web/import-zip?name=${encodeURIComponent(file.name)}`), {
-    method: 'POST',
-    headers: { 'x-playboard': '1' },
-    body: file,
-  })
-  if (!r.ok) throw new Error(`${r.status} ${await r.text()}`)
-  return r.json()
+// «Añadir zips» de la pantalla Importar: el service worker copia cada zip en reports/ de la carpeta elegida
+export async function addZipFiles(files, onProgress) {
+  for (const [i, file] of files.entries()) {
+    onProgress?.(i + 1)
+    const r = await fetch(appUrl(`api/web/add-zip?name=${encodeURIComponent(file.name)}`), {
+      method: 'POST',
+      headers: { 'x-playboard': '1' },
+      body: file,
+    })
+    if (!r.ok) throw new Error(`${file.name}: ${r.status} ${await r.text()}`)
+  }
 }
 
 // Volver a la bienvenida para elegir otra carpeta

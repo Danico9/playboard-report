@@ -28,7 +28,7 @@ El reporte HTML de Playwright es muy completo, pero solo muestra una ejecución.
 | ![Resumen en modo claro](docs/screenshots/overview-light.png) | ![Resumen con la interfaz en inglés](docs/screenshots/overview-dark-en.png) |
 | **Modo claro** | **Interfaz en inglés** |
 | ![Pantalla de bienvenida de la versión web](docs/screenshots/web-welcome-dark.png) | ![Importar zips en la versión web](docs/screenshots/web-import-dark.png) |
-| **Versión web**: elige tu carpeta o mira los datos de ejemplo | **Importar** en la versión web: elige o arrastra los zips |
+| **Versión web**: elige tu carpeta o mira los datos de ejemplo | **Importar** en la versión web, con «Añadir zips…» |
 
 </details>
 
@@ -372,7 +372,7 @@ Diferencias con la app de escritorio:
 |---|---|---|
 | Navegadores | Cualquiera | Chrome y Edge (otros navegadores, solo los datos de ejemplo) |
 | Reportes nuevos | Se detectan solos | Botón **Recargar datos** |
-| Importar zips del CI | Los de `reports/` (y también carpetas); el zip se borra al importarlo | Los que eliges o arrastras en **Importar**; el zip no se borra |
+| Importar zips y carpetas del CI | Sí; aparecen solos en **Importar** | Sí, igual; pulsa **Actualizar** para ver los nuevos, o añade los zips con **Añadir zips…** (los copia en `reports/`) |
 | Tu configuración (`*.local.js`) | Sí (salvo el ejecutable genérico) | No: módulos y notas con la configuración genérica |
 | Permiso de la carpeta | — | El navegador la recuerda, pero pide permiso de nuevo en cada sesión |
 

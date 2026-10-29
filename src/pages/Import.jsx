@@ -2,10 +2,10 @@ import { useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { ReportsHelp } from '../components/Help'
 import { Empty, ErrorBox, Loading } from '../components/ui'
-import { refreshAll, refreshData, refreshZips, useInfo, useSummary, useZips } from '../lib/store'
+import { refreshData, refreshZips, useInfo, useSummary, useZips } from '../lib/store'
 import { addImportResults, clearImportResults, dismissImportResult, useImportResults } from '../lib/importResults'
 import { fmtDate } from '../lib/format'
-import { WEB_MODE, appUrl, importZipFile } from '../lib/webMode'
+import { WEB_MODE, addZipFiles, appUrl } from '../lib/webMode'
 import { numberLocale, t } from '../i18n'
 
 // El nombre de la carpeta está en UTC: 2026-09-23_01-03-36_all-tests
@@ -25,9 +25,9 @@ const fmtSize = (b) => (b > 1e6 ? `${(b / 1e6).toLocaleString(numberLocale(), { 
 const UNREADABLE = 'No se puede leer (¿aún se está copiando?):'
 const itemError = (e) => (e.startsWith(UNREADABLE) ? `${t(UNREADABLE)}${e.slice(UNREADABLE.length)}` : t(e))
 
-// Los errores conocidos de importar un zip se traducen; el resto (p. ej. un zip dañado) se muestra tal cual
-const ZIP_ERRORS = ['no contiene ningún reporte HTML de Playwright', 'contiene otros zips en vez de reportes: descomprímelo e importa los zips que hay dentro']
-const resultError = (e) => (ZIP_ERRORS.includes(e) ? t(e) : e)
+// Los errores conocidos de importar se traducen; el resto (p. ej. un zip dañado) se muestra tal cual
+const RESULT_ERRORS = ['no contiene ningún reporte HTML de Playwright']
+const resultError = (e) => (RESULT_ERRORS.includes(e) ? t(e) : e)
 
 // Elementos importables: zips y carpetas sueltas de reports/ (se identifican por tipo + nombre)
 const itemKey = (item) => `${item.kind}:${item.name}`
@@ -38,12 +38,11 @@ function itemState(item) {
   return { cls: 'info', label: 'Pendiente', selectable: true }
 }
 
-// Resultado de cada importación (los dos modos): se mantiene hasta que el usuario lo cierra
+// Resultado de cada importación: se mantiene hasta que el usuario lo cierra
 function ImportResults({ label }) {
   const results = useImportResults()
   if (!results.length) return null
-  // En la web el zip es un fichero que eligió el usuario: no se borra ni hace falta decir nada de él
-  const kept = (r) => (r.kind === 'upload' ? '' : r.kind === 'folder' ? t('La carpeta se conserva.') : t('El zip se conserva.'))
+  const kept = (r) => (r.kind === 'folder' ? t('La carpeta se conserva.') : t('El zip se conserva.'))
   const removed = (r) => (r.kind === 'folder' ? t('Carpeta vacía eliminada.') : t('Zip eliminado.'))
   return (
     <div className="card">
@@ -77,7 +76,44 @@ function ImportResults({ label }) {
   )
 }
 
-function DesktopImport() {
+// Versión web: no hay forma de copiar ficheros en reports/ desde el explorador y que la app se entere, así que los zips
+// elegidos o arrastrados en el navegador se copian en reports/ de la carpeta y aparecen en la lista como pendientes
+function AddZips({ disabled, onError }) {
+  const input = useRef(null)
+  const [adding, setAdding] = useState(null) // { i, n }
+  const [over, setOver] = useState(false)
+
+  const add = async (fileList) => {
+    const files = [...fileList].filter((f) => f.name.toLowerCase().endsWith('.zip'))
+    if (!files.length) return onError(new Error(t('Elige ficheros .zip con reportes de Playwright.')))
+    onError(null)
+    try {
+      await addZipFiles(files, (i) => setAdding({ i, n: files.length }))
+    } catch (e) {
+      onError(e)
+    } finally {
+      setAdding(null)
+      refreshZips()
+    }
+  }
+  const busy = disabled || !!adding
+
+  return (
+    <div
+      className={`card drop-zone${over ? ' over' : ''}`}
+      onDragOver={(e) => { e.preventDefault(); setOver(true) }}
+      onDragLeave={() => setOver(false)}
+      onDrop={(e) => { e.preventDefault(); setOver(false); if (!busy) add(e.dataTransfer.files) }}
+    >
+      <p>{adding ? t('Copiando zip {i} de {n}…', adding) : t('Arrastra aquí los zips del CI o')}</p>
+      <button className="btn" onClick={() => input.current.click()} disabled={busy}>{t('Añadir zips…')}</button>
+      <input ref={input} type="file" accept=".zip" multiple hidden onChange={(e) => { add(e.target.files); e.target.value = '' }} />
+      <p className="muted small">{t('Se copian en reports/ de tu carpeta (el original no se toca) y aparecen abajo como pendientes.')}</p>
+    </div>
+  )
+}
+
+export default function Import() {
   const res = useZips()
   const { data: summary } = useSummary()
   const tz = useInfo().data?.timeZone
@@ -152,6 +188,7 @@ function DesktopImport() {
 
       <ImportResults label={label} />
       {error && <ErrorBox error={error} />}
+      {WEB_MODE && <AddZips disabled={busy} onError={setError} />}
 
       <div className="card flush">
         <div className="card-head" style={{ flexWrap: 'wrap', paddingBottom: 12 }}>
@@ -166,7 +203,9 @@ function DesktopImport() {
           </button>
         </div>
         {res.status === 'error' && !res.data ? <ErrorBox error={res.error} /> : !res.data ? <Loading what="zips" /> : items.length === 0 ? (
-          <Empty>{t('No hay nada que importar en reports/. Copia ahí los artifacts (N).zip del CI o las carpetas de reportes; aparecerán aquí automáticamente.')}</Empty>
+          <Empty>{WEB_MODE
+            ? t('No hay nada que importar en reports/. Añade los artifacts (N).zip del CI con «Añadir zips…» o arrastrándolos aquí arriba.')
+            : t('No hay nada que importar en reports/. Copia ahí los artifacts (N).zip del CI o las carpetas de reportes; aparecerán aquí automáticamente.')}</Empty>
         ) : (
           <div className="table-wrap">
             <table className="table">
@@ -209,72 +248,4 @@ function DesktopImport() {
       </div>
     </div>
   )
-}
-
-// Versión web: el usuario elige zips en el navegador (o los arrastra) y sus reportes se descomprimen en
-// reports/playwright-reports/ de la carpeta elegida. Solo se añaden carpetas: ni el zip ni nada más se borra.
-function WebImport() {
-  const { data: summary } = useSummary()
-  const tz = useInfo().data?.timeZone
-  const label = (id) => runLabel(id, tz)
-  const input = useRef(null)
-  const [progress, setProgress] = useState(null) // { name, i, n }
-  const [over, setOver] = useState(false)
-  const [error, setError] = useState(null)
-
-  const run = async (fileList) => {
-    const files = [...fileList].filter((f) => f.name.toLowerCase().endsWith('.zip'))
-    if (!files.length) return setError(new Error(t('Elige ficheros .zip con reportes de Playwright.')))
-    setError(null)
-    try {
-      for (const [i, file] of files.entries()) {
-        setProgress({ name: file.name, i: i + 1, n: files.length })
-        addImportResults([await importZipFile(file)])
-      }
-    } catch (e) {
-      setError(e)
-    } finally {
-      setProgress(null)
-      refreshAll()
-    }
-  }
-
-  const onDrop = (e) => {
-    e.preventDefault()
-    setOver(false)
-    if (!progress) run(e.dataTransfer.files)
-  }
-
-  return (
-    <div className="page">
-      <div className="page-head">
-        <div>
-          <h1>{t('Importar reportes')}</h1>
-          <p>{t('Elige los zips de artefactos del CI: sus reportes se descomprimen en reports/playwright-reports/ de la carpeta que usas. El zip no se borra ni se cambia nada más.')}</p>
-        </div>
-        {summary && <span className="muted small">{t('{n} reportes en el dashboard', { n: summary.runs.length })}</span>}
-      </div>
-
-      <ImportResults label={label} />
-      {error && <ErrorBox error={error} />}
-
-      <div
-        className={`card drop-zone${over ? ' over' : ''}`}
-        onDragOver={(e) => { e.preventDefault(); setOver(true) }}
-        onDragLeave={() => setOver(false)}
-        onDrop={onDrop}
-      >
-        <p>{progress ? t('Importando {name}… ({i} de {n})', progress) : t('Arrastra aquí los zips o')}</p>
-        <button className="btn primary" onClick={() => input.current.click()} disabled={!!progress}>
-          {progress ? t('Procesando… (unos segundos por elemento)') : t('Elegir zips…')}
-        </button>
-        <input ref={input} type="file" accept=".zip" multiple hidden onChange={(e) => { run(e.target.files); e.target.value = '' }} />
-        <p className="muted small">{t('Si un reporte ya está en el dashboard (misma fecha y hora de inicio), no se duplica.')}</p>
-      </div>
-    </div>
-  )
-}
-
-export default function Import() {
-  return WEB_MODE ? <WebImport /> : <DesktopImport />
 }

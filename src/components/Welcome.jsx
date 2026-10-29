@@ -30,7 +30,7 @@ function Explanation() {
           <summary>Differences with the desktop app</summary>
           <ul>
             <li>Only <b>Chrome and Edge</b> (and other Chromium browsers) can open a folder. In Firefox and Safari you can only see the sample data.</li>
-            <li><b>Import</b> takes the zips you choose in the browser (or drop on the page) and extracts them into <code>reports/playwright-reports/</code>. The zips are not deleted, and loose zips or folders in <code>reports/</code> are not listed.</li>
+            <li>New zips and folders in <code>reports/</code> are not detected on their own: click <b>Refresh</b> in <b>Import</b>, or add the zips there with <b>Add zips…</b>.</li>
             <li>New reports are not detected automatically: use <b>Reload data</b>.</li>
             <li>Your own configuration (<code>*.local.js</code>: module names, note categories) is not used; the generic one is.</li>
           </ul>
@@ -56,7 +56,7 @@ function Explanation() {
         <summary>Diferencias con la app de escritorio</summary>
         <ul>
           <li>Solo <b>Chrome y Edge</b> (y otros navegadores basados en Chromium) pueden abrir una carpeta. En Firefox y Safari solo se pueden ver los datos de ejemplo.</li>
-          <li><b>Importar</b> recibe los zips que eliges en el navegador (o arrastras a la página) y los descomprime en <code>reports/playwright-reports/</code>. Los zips no se borran, y no se listan los zips ni las carpetas sueltas de <code>reports/</code>.</li>
+          <li>Los zips y carpetas nuevos de <code>reports/</code> no se detectan solos: pulsa <b>Actualizar</b> en <b>Importar</b>, o añade ahí los zips con <b>Añadir zips…</b>.</li>
           <li>Los reportes nuevos no se detectan solos: pulsa <b>Recargar datos</b>.</li>
           <li>No se usa tu configuración propia (<code>*.local.js</code>: nombres de módulos, categorías de notas), sino la genérica.</li>
         </ul>

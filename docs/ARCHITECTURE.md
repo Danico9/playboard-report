@@ -144,10 +144,13 @@ Navegador ── App React (src/, VITE_PLAYBOARD_WEB) ──fetch <base>/api/*, 
 
 - **`web/sw.js`**: responde a `<base>/api/*` ejecutando el **middleware real** de `server/api.mjs` (adapta `Request`/`Response` a los `req`/`res` de Node),
   y a `<base>/reports/**` leyendo el fichero de la carpeta (con `Range`, para los vídeos). Añade `/api/web/reload` (vuelve a leer la carpeta), contesta `204` a `/api/events`
-  (no hay avisos en vivo) y `[]` a `/api/zips` (no hay «Importar»). Las navegaciones a rutas de la app devuelven siempre el `index.html`.
+  (no hay avisos en vivo) y `POST /api/web/add-zip` («Añadir zips…» de Importar: copia en `reports/` un zip elegido en el navegador). Antes de `/api/zips` y
+  `/api/zips/import` vuelve a mirar qué hay suelto en `reports/` y lee los zips (`loadLoose()`): «Importar» es el de escritorio, con los mismos borrados y movimientos.
+  En `/api/info` cambia las rutas internas (`/data/…`) por el nombre de la carpeta elegida, para la guía de Importar. Las navegaciones a rutas de la app devuelven siempre el `index.html`.
 - **`web/shims/`**: `rolldown` empaqueta el service worker cambiando `node:fs`, `node:path` y `node:url` por estos sustitutos. `fs.js` es un sistema de ficheros
-  **síncrono en memoria**: antes de procesar se carga de la carpeta (`reports/*.json`, solo el tamaño y la fecha de cada `index.html`, `notes/**/*.md` y la caché de OPFS)
-  y de los `index.html` solo se leen los nuevos o cambiados (misma marca `tamaño:fecha` que la ingesta). Al terminar, `flush()` escribe en la carpeta o en OPFS lo que haya cambiado.
+  **síncrono en memoria**: antes de procesar se carga de la carpeta (`reports/*.json`, solo el tamaño y la fecha de cada `index.html`, los zips y carpetas sueltas de `reports/`, `notes/**/*.md` y la caché de OPFS)
+  y de los `index.html` solo se leen los nuevos o cambiados (misma marca `tamaño:fecha` que la ingesta). Al terminar, `flush()` escribe en la carpeta o en OPFS lo que haya cambiado
+  (un fichero movido se copia desde su original y luego se borra este; las carpetas se borran solo si han quedado vacías).
   `process.env` (con `PLAYBOARD_ROOT=/data`) y `Buffer.from(base64)` se definen en la cabecera del bundle.
 - **`web/folder.js`**: la carpeta elegida se guarda en IndexedDB (`{ kind: 'folder', handle }` o `{ kind: 'opfs', name }` para los datos de ejemplo), donde la leen la página y el
   service worker. Vale la carpeta que contiene `reports/` (y `notes/`) o la propia `reports/`. El permiso solo se puede pedir desde la página.
@@ -156,9 +159,8 @@ Navegador ── App React (src/, VITE_PLAYBOARD_WEB) ──fetch <base>/api/*, 
   `App.jsx` envuelve el router en `<WebGate>`: hasta que hay datos se ve la bienvenida (elegir carpeta, seguir con la de la última vez o ver los datos de ejemplo),
   con ejemplos de qué carpeta elegir (`components/FolderGuide.jsx`: árboles de carpetas que funcionan, a medias o no). Al leer otra carpeta, `onFolderLoaded()` avisa a `store.js`,
   que vacía su caché para que no se vean datos de la anterior, y «Cambiar carpeta» vuelve a la raíz de la app.
-  En `Layout` aparecen la marca **Web**, la carpeta con «Recargar datos» y «Cambiar carpeta». «Importar» (`pages/Import.jsx`, `WebImport`) no lista `reports/`:
-  el usuario elige o arrastra zips, `importZipFile()` los envía uno a uno a `POST /api/web/import-zip` (solo en `web/sw.js`), que usa `extractZip()` de la ingesta
-  para descomprimir en `reports/playwright-reports/` los reportes que falten (sin borrar nada) y vuelve a cargar la carpeta. `store.js` no abre `EventSource`.
+  En `Layout` aparecen la marca **Web**, la carpeta con «Recargar datos» y «Cambiar carpeta». «Importar» es la misma pantalla con
+  una zona más, `AddZips`, para elegir o arrastrar zips (`addZipFiles()`), que se copian en `reports/` y aparecen como pendientes. `store.js` no abre `EventSource`.
 - **Descargas y trazas**: Chrome no pasa las descargas por el service worker y el visor de trazas de cada reporte registra su propio service worker (que no existe sin servidor).
   En modo web, «Descargar trace» descarga un `blob:` y «Abrir trace» abre el visor oficial de Playwright publicado en `trace-viewer/` (copiado de `playwright-core`
   al compilar, con su licencia) y le pasa la traza con `postMessage({ method: 'load', params: { trace: Blob } })` cuando avisa con `{ method: 'ready' }`.
@@ -167,8 +169,8 @@ Navegador ── App React (src/, VITE_PLAYBOARD_WEB) ──fetch <base>/api/*, 
   módulo de la demo, `setDemoModuleNames()`); `404.html` (copia del `index.html`, para los enlaces directos antes de que haya service worker) y `.nojekyll`.
   `scripts/serve-web.mjs` (`npm run preview:web`) sirve `dist-web/` como GitHub Pages. `.github/workflows/pages.yml` la publica en cada push a `master`.
 - **Requisito para el código de `server/` y de la ingesta**: solo pueden usar las funciones de `fs` que implementa `web/shims/fs.js` (`existsSync`, `readFileSync`, `writeFileSync`,
-  `renameSync`, `rmSync`, `mkdirSync`, `readdirSync`, `statSync`, `createReadStream`, `watch`), `path` POSIX y nada más de Node fuera de las ramas que la web no usa
-  (la lista de «Importar» y sus borrados, `standalone.mjs`). Si se usa algo nuevo, hay que añadirlo al sustituto y probar `npm run build:web`.
+  `renameSync`, `rmSync`, `mkdirSync`, `rmdirSync`, `readdirSync`, `statSync`, `createReadStream`, `watch`), `path` POSIX y nada más de Node fuera de las ramas que la web no usa
+  (`standalone.mjs`). Si se usa algo nuevo, hay que añadirlo al sustituto y probar `npm run build:web`.
 
 ## Variables de entorno
 
@@ -180,7 +182,7 @@ Navegador ── App React (src/, VITE_PLAYBOARD_WEB) ──fetch <base>/api/*, 
 | `PLAYBOARD_PORT` | Puerto del servidor de `npm start` y del ejecutable (por defecto 4174) |
 | `VITE_PLAYBOARD_DEMO` | La pone `npm run demo`: ignora los `*.local.js` y usa los nombres de módulo de la demo |
 | `VITE_PLAYBOARD_NO_LOCAL` | La ponen `build:exe:generic` y `build:web`: compila sin los `*.local.js` |
-| `VITE_PLAYBOARD_WEB` | La pone `build:web`: versión web (bienvenida, service worker, «Importar» con zips elegidos en el navegador) |
+| `VITE_PLAYBOARD_WEB` | La pone `build:web`: versión web (bienvenida, service worker, «Añadir zips…» en Importar) |
 | `PLAYBOARD_WEB_BASE` | Base de la versión web (p. ej. `playboard-report`), si no se pasa `--base` |
 
 ## Datos de demostración

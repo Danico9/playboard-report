@@ -9,6 +9,7 @@ const dirs = new Set(['/'])
 const mounts = [] // { prefix, handle }
 const dirty = new Set()
 const removed = new Set()
+const removedDirs = new Set() // carpetas que hay que borrar del disco (solo si quedan vacías)
 const encoder = new TextEncoder()
 const decoder = new TextDecoder()
 
@@ -26,6 +27,7 @@ export function reset() {
   mounts.length = 0
   dirty.clear()
   removed.clear()
+  removedDirs.clear()
 }
 
 export function mount(prefix, handle) {
@@ -60,6 +62,12 @@ export async function loadContent(p) {
   if (f && !f.data) f.data = new Uint8Array(await (await f.handle.getFile()).arrayBuffer())
 }
 
+// Olvida lo cargado bajo prefix (sin tocar el disco), para volver a leerlo con load()
+export function forget(prefix) {
+  for (const p of [...files.keys()]) if (p === prefix || p.startsWith(prefix + '/')) files.delete(p)
+  for (const d of [...dirs]) if (d === prefix || d.startsWith(prefix + '/')) dirs.delete(d)
+}
+
 // Libera el contenido de los ficheros bajo prefix (se quedan su tamaño y fecha; se pueden volver a cargar con loadContent)
 export function dropContents(prefix) {
   for (const [p, f] of files) if (p.startsWith(prefix) && f.handle && !dirty.has(p)) f.data = null
@@ -76,21 +84,28 @@ async function handleFor(p, create) {
 
 export async function flush() {
   const written = []
-  for (const p of removed) {
-    const h = await handleFor(p, false).catch(() => null)
-    if (h) await h.dir.removeEntry(h.name).catch(() => {})
-  }
+  // Primero se escribe: un fichero movido (renameSync) se copia desde su original, que se borra después
   for (const p of dirty) {
     const f = files.get(p)
     const h = f && (await handleFor(p, true))
     if (!h) continue
     const w = await (await h.dir.getFileHandle(h.name, { create: true })).createWritable()
-    await w.write(f.data)
+    await w.write(f.data ?? (await f.handle.getFile()))
     await w.close()
     written.push(p)
   }
+  for (const p of removed) {
+    const h = await handleFor(p, false).catch(() => null)
+    if (h) await h.dir.removeEntry(h.name).catch(() => {})
+  }
+  // Las carpetas, de la más profunda a la menos, y sin borrar su contenido: si queda algo dentro, se conserva
+  for (const p of [...removedDirs].sort((a, b) => b.length - a.length)) {
+    const h = await handleFor(p, false).catch(() => null)
+    if (h) await h.dir.removeEntry(h.name).catch(() => {})
+  }
   dirty.clear()
   removed.clear()
+  removedDirs.clear()
   return written
 }
 
@@ -116,10 +131,17 @@ export function writeFileSync(p, content) {
 }
 
 export function renameSync(a, b) {
+  // Carpeta (moveDir() de la ingesta al importar una carpeta suelta): se mueve fichero a fichero
+  if (!files.has(a) && dirs.has(a)) {
+    for (const p of [...files.keys()]) if (p.startsWith(a + '/')) renameSync(p, b + p.slice(a.length))
+    for (const d of [...dirs]) if (d === a || d.startsWith(a + '/')) { dirs.delete(d); removedDirs.add(d); addDir(b + d.slice(a.length)) }
+    return
+  }
   const f = files.get(a)
   if (!f) throw enoent(a)
   files.delete(a)
   files.set(b, f)
+  addDir(dirname(b))
   if (dirty.delete(a)) dirty.add(b)
   else { removed.add(a); dirty.add(b) }
   removed.delete(b)
@@ -130,15 +152,21 @@ export function rmSync(p, opts) {
     dirty.delete(p)
     removed.add(p)
   } else if (opts?.recursive && dirs.has(p)) {
-    // Carpeta (p. ej. un reporte de un zip que no es válido): se borran sus ficheros y se olvidan sus subcarpetas.
-    // Solo se usa con carpetas recién escritas, que aún no están en disco
+    // Carpeta: un reporte de un zip que no es válido o la copia duplicada de una carpeta suelta
     for (const f of [...files.keys()]) if (f.startsWith(p + '/')) rmSync(f)
-    for (const d of [...dirs]) if (d === p || d.startsWith(p + '/')) dirs.delete(d)
+    for (const d of [...dirs]) if (d === p || d.startsWith(p + '/')) { dirs.delete(d); removedDirs.add(d) }
   } else if (!opts?.force) throw enoent(p)
 }
 
 export function mkdirSync(p) {
   addDir(p)
+  removedDirs.delete(p)
+}
+
+export function rmdirSync(p) {
+  if (!dirs.has(p)) throw enoent(p)
+  dirs.delete(p)
+  removedDirs.add(p)
 }
 
 export function readdirSync(dir, opts) {
@@ -156,7 +184,12 @@ export function readdirSync(dir, opts) {
 export function statSync(p) {
   const f = files.get(p)
   if (f) return { size: f.size, mtimeMs: f.mtimeMs, isFile: () => true, isDirectory: () => false }
-  if (dirs.has(p)) return { size: 0, mtimeMs: 0, isFile: () => false, isDirectory: () => true }
+  if (dirs.has(p)) {
+    // El navegador no da la fecha de una carpeta: se usa la del fichero más reciente que contiene
+    let mtimeMs = 0
+    for (const [f, { mtimeMs: m }] of files) if (f.startsWith(p + '/') && m > mtimeMs) mtimeMs = m
+    return { size: 0, mtimeMs, isFile: () => false, isDirectory: () => true }
+  }
   throw enoent(p)
 }
 
@@ -169,4 +202,4 @@ export function createReadStream(p, opts = {}) {
 
 export const watch = () => ({ close() {} })
 
-export default { existsSync, readFileSync, writeFileSync, renameSync, rmSync, mkdirSync, readdirSync, statSync, createReadStream, watch }
+export default { existsSync, readFileSync, writeFileSync, renameSync, rmSync, mkdirSync, rmdirSync, readdirSync, statSync, createReadStream, watch }

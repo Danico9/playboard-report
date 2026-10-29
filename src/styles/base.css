@@ -547,6 +547,6 @@ details.fold[open] > summary { margin-bottom: 8px; }
 .folder-tree .note { color: var(--accent); font-family: inherit; }
 
 /* «Importar» en la versión web: zona para soltar o elegir zips */
-.drop-zone { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 40px 16px; text-align: center; border: 1px dashed var(--border-strong); }
+.drop-zone { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 20px 16px; text-align: center; border: 1px dashed var(--border-strong); }
 .drop-zone.over { border-style: solid; border-color: var(--accent); background: var(--accent-soft); }
 .drop-zone p { margin: 0; }

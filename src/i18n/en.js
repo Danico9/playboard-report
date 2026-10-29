@@ -391,14 +391,13 @@ export default {
   'Contiene otros zips en vez de reportes: descomprímelo en reports/ y aparecerán aquí para importarlos': 'Contains other zips instead of reports: extract it into reports/ and they will show up here to import',
   'No se puede leer (¿aún se está copiando?):': 'Cannot be read (is it still being copied?):',
   'no contiene ningún reporte HTML de Playwright': 'contains no Playwright HTML report',
-  'contiene otros zips en vez de reportes: descomprímelo e importa los zips que hay dentro': 'contains other zips instead of reports: extract it and import the zips inside',
   'Elige ficheros .zip con reportes de Playwright.': 'Choose .zip files with Playwright reports.',
-  'Elige los zips de artefactos del CI: sus reportes se descomprimen en reports/playwright-reports/ de la carpeta que usas. El zip no se borra ni se cambia nada más.':
-    'Choose your CI artifact zips: their reports are extracted into reports/playwright-reports/ in the folder you are using. The zip is not deleted and nothing else is changed.',
-  'Importando {name}… ({i} de {n})': 'Importing {name}… ({i} of {n})',
-  'Arrastra aquí los zips o': 'Drop the zips here or',
-  'Elegir zips…': 'Choose zips…',
-  'Si un reporte ya está en el dashboard (misma fecha y hora de inicio), no se duplica.': 'If a report is already in the dashboard (same start date and time), it is not duplicated.',
+  'No hay nada que importar en reports/. Añade los artifacts (N).zip del CI con «Añadir zips…» o arrastrándolos aquí arriba.':
+    'There is nothing to import in reports/. Add your CI artifacts (N).zip with “Add zips…” or by dropping them above.',
+  'Copiando zip {i} de {n}…': 'Copying zip {i} of {n}…',
+  'Arrastra aquí los zips del CI o': 'Drop your CI zips here or',
+  'Añadir zips…': 'Add zips…',
+  'Se copian en reports/ de tu carpeta (el original no se toca) y aparecen abajo como pendientes.': 'They are copied into reports/ in your folder (the original is untouched) and show up below as pending.',
 
   // ─── Guías ───
   '¿Cómo añado mis reportes?': 'How do I add my reports?',

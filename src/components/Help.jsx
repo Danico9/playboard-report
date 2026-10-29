@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useInfo } from '../lib/store'
 import { COVERAGE_NOTE, KNOWN_ISSUES_NOTE } from '../config/notes'
 import { getLang, t } from '../i18n'
+import { WEB_MODE } from '../lib/webMode'
 
 function PathBox({ path }) {
   const [copied, setCopied] = useState(false)
@@ -34,17 +35,18 @@ export function ReportsHelp({ open = false }) {
             <code> playwright-reports/&lt;date&gt;_&lt;suite&gt;/index.html</code>).
           </li>
           <li>
-            Copy the zip, without extracting it, into the project&apos;s <code>reports/</code> folder:
+            Copy the zip, without extracting it, into the project&apos;s <code>reports/</code> folder
+            {WEB_MODE && <> (or click <b>Add zips…</b> on this screen, which copies it there for you)</>}:
             <PathBox path={info?.reportsDir} />
           </li>
           <li>
-            It will show up on this screen. Select it and click <b>Import</b>. The app extracts it,
+            It will show up on this screen{WEB_MODE && <> (if you copied it yourself, click <b>Refresh</b>)</>}. Select it and click <b>Import</b>. The app extracts it,
             checks that the report can be read, deletes the zip and adds it to the dashboard.
           </li>
           <li>
             Already extracted? Copy the report folder (the one with <code>index.html</code> and <code>data/</code>) into <code>reports/</code> too:
             it shows up here and, when imported, it is moved to <code>reports/playwright-reports/</code>.
-            Or copy it straight into <code>reports/playwright-reports/</code> and it is picked up automatically:
+            Or copy it straight into <code>reports/playwright-reports/</code> and it is picked up {WEB_MODE ? <>when you click <b>Reload data</b></> : 'automatically'}:
             <PathBox path={info?.runsDir} />
           </li>
         </ol>
@@ -55,17 +57,18 @@ export function ReportsHelp({ open = false }) {
             <code> playwright-reports/&lt;fecha&gt;_&lt;suite&gt;/index.html</code>).
           </li>
           <li>
-            Copia el zip, sin descomprimirlo, en la carpeta <code>reports/</code> del proyecto:
+            Copia el zip, sin descomprimirlo, en la carpeta <code>reports/</code> del proyecto
+            {WEB_MODE && <> (o pulsa <b>Añadir zips…</b> en esta pantalla, que lo copia ahí por ti)</>}:
             <PathBox path={info?.reportsDir} />
           </li>
           <li>
-            Aparecerá en esta pantalla. Selecciónalo y pulsa <b>Importar</b>. La app lo descomprime,
+            Aparecerá en esta pantalla{WEB_MODE && <> (si lo has copiado tú, pulsa <b>Actualizar</b>)</>}. Selecciónalo y pulsa <b>Importar</b>. La app lo descomprime,
             comprueba que el reporte se puede leer, borra el zip y lo añade al dashboard.
           </li>
           <li>
             ¿Ya lo tienes descomprimido? Copia la carpeta del reporte (la que tiene <code>index.html</code> y <code>data/</code>) también en <code>reports/</code>:
             aparecerá aquí y, al importarla, se moverá a <code>reports/playwright-reports/</code>.
-            O cópiala directamente en <code>reports/playwright-reports/</code> y se detectará sola:
+            O cópiala directamente en <code>reports/playwright-reports/</code> y se detectará {WEB_MODE ? <>al pulsar <b>Recargar datos</b></> : 'sola'}:
             <PathBox path={info?.runsDir} />
           </li>
         </ol>

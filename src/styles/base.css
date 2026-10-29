@@ -545,3 +545,8 @@ details.fold[open] > summary { margin-bottom: 8px; }
 .folder-tree { margin: 0; padding: 10px 12px; border-radius: 8px; background: var(--surface-2); font-family: var(--mono); font-size: 12px; line-height: 1.55; overflow-x: auto; white-space: pre; }
 .folder-tree .dir { color: var(--text); font-weight: 600; }
 .folder-tree .note { color: var(--accent); font-family: inherit; }
+
+/* «Importar» en la versión web: zona para soltar o elegir zips */
+.drop-zone { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 40px 16px; text-align: center; border: 1px dashed var(--border-strong); }
+.drop-zone.over { border-style: solid; border-color: var(--accent); background: var(--accent-soft); }
+.drop-zone p { margin: 0; }

@@ -129,6 +129,11 @@ export function rmSync(p, opts) {
   if (files.delete(p)) {
     dirty.delete(p)
     removed.add(p)
+  } else if (opts?.recursive && dirs.has(p)) {
+    // Carpeta (p. ej. un reporte de un zip que no es válido): se borran sus ficheros y se olvidan sus subcarpetas.
+    // Solo se usa con carpetas recién escritas, que aún no están en disco
+    for (const f of [...files.keys()]) if (f.startsWith(p + '/')) rmSync(f)
+    for (const d of [...dirs]) if (d === p || d.startsWith(p + '/')) dirs.delete(d)
   } else if (!opts?.force) throw enoent(p)
 }
 

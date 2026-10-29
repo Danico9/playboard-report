@@ -135,10 +135,27 @@ export function listZips() {
 // Descomprime los reportes que falten y borra el zip solo si todos sus reportes quedan importados y legibles
 export function importZip(file, log = console.log) {
   const zipPath = zipPathOf(file)
-  const entries = unzipSync(fs.readFileSync(zipPath))
+  const result = extractZip(file, fs.readFileSync(zipPath), log)
+  const deleted = result.failed.length === 0
+  if (deleted) {
+    fs.rmSync(zipPath)
+    zipListCache.delete(file)
+    log(`[importar] Eliminado ${file}`)
+  }
+  return { ...result, deleted }
+}
+
+// Descomprime en playwright-reports/ los reportes del zip que falten y comprueba que se leen.
+// Lo usan importZip() y la versión web (web/sw.js), que recibe el zip del navegador y no lo borra.
+export function extractZip(file, bytes, log = console.log) {
+  const entries = unzipSync(bytes)
   const names = Object.keys(entries)
   const runs = runsInZip(file, names, entries)
-  if (!runs.size) throw new Error('no contiene ningún reporte HTML de Playwright')
+  if (!runs.size) {
+    throw new Error(names.some((n) => n.toLowerCase().endsWith('.zip'))
+      ? 'contiene otros zips en vez de reportes: descomprímelo e importa los zips que hay dentro'
+      : 'no contiene ningún reporte HTML de Playwright')
+  }
 
   const imported = []
   const failed = []
@@ -164,14 +181,8 @@ export function importZip(file, log = console.log) {
       log(`[importar] El reporte ${runId} de ${file} no es válido (${e.message}); se conserva el zip.`)
     }
   }
-  const deleted = failed.length === 0
-  if (deleted) {
-    fs.rmSync(zipPath)
-    zipListCache.delete(file)
-    log(`[importar] Eliminado ${file}`)
-  }
   const alreadyImported = [...runs.values()].filter((id) => !imported.includes(id) && !failed.some((f) => f.runId === id))
-  return { file, kind: 'zip', imported, alreadyImported, failed, deleted }
+  return { file, kind: 'zip', imported, alreadyImported, failed }
 }
 
 // ─── Carpetas de reportes sueltas en reports/ ───

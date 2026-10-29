@@ -102,12 +102,10 @@ export default function Layout() {
             {newEnvs > 0 && <span className="badge" title={t('{n} entornos nuevos sin nombre', { n: newEnvs })}>{newEnvs}</span>}
           </NavLink>
         )}
-        {/* Importar mueve y borra ficheros del usuario: no está en la versión web */}
-        {!WEB_MODE && (
-          <NavLink to="/importar" className="nav-link">
-            <Icon name="import" />{t('Importar')}{pending > 0 && <span className="badge" title={t('{n} zips pendientes', { n: pending })}>{pending}</span>}
-          </NavLink>
-        )}
+        {/* En la versión web, «Importar» sube zips elegidos en el navegador (no hay zips pendientes en reports/) */}
+        <NavLink to="/importar" className="nav-link">
+          <Icon name="import" />{t('Importar')}{pending > 0 && <span className="badge" title={t('{n} zips pendientes', { n: pending })}>{pending}</span>}
+        </NavLink>
         <div className="nav-group">{t('Documentación')}</div>
         <NavLink to="/notas" className="nav-link"><Icon name="notes" />{t('Notas')}</NavLink>
         <div className="sidebar-foot">

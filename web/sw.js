@@ -6,6 +6,7 @@
 
 import * as vfs from './shims/fs.js'
 import { createApi, MIME } from '../server/api.mjs'
+import { extractZip } from '../scripts/ingest-reports.mjs'
 import { cacheName, getRoot, resolveFolders, rootDirectory } from './folder.js'
 
 const ROOT = '/data' // rutas «de disco» que ve el código del servidor (PLAYBOARD_ROOT, ver scripts/build-web.mjs)
@@ -143,6 +144,24 @@ async function serveReportFile(request, rel) {
   }
 }
 
+// Un zip elegido en el navegador: sus reportes se descomprimen en reports/playwright-reports/ de la carpeta del usuario
+// (solo se añaden carpetas nuevas; el zip no se toca). Después se vuelve a leer la carpeta para que entren en el dashboard.
+async function importZip(request) {
+  if (request.method !== 'POST' || request.headers.get('x-playboard') !== '1') return new Response('Petición no permitida', { status: 403 })
+  const name = new URL(request.url).searchParams.get('name') || 'zip'
+  await ensureState()
+  const logs = []
+  let result
+  try {
+    result = extractZip(name, new Uint8Array(await request.arrayBuffer()), (m) => logs.push(m))
+    await vfs.flush()
+  } catch (e) {
+    result = { file: name, kind: 'zip', error: e.message, imported: [], alreadyImported: [], failed: [] }
+  }
+  state = null // la siguiente petición vuelve a cargar la carpeta y procesa los reportes nuevos
+  return json({ ...result, kind: 'upload' })
+}
+
 const json = (data, status = 200) => new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json; charset=utf-8' } })
 
 async function handle(request, path) {
@@ -155,9 +174,11 @@ async function handle(request, path) {
       await ensureState()
       return json(state.timings)
     }
-    // «Importar» mueve y borra ficheros del usuario: no está disponible en la versión web
+    // La lista de «Importar» (zips y carpetas sueltas en reports/) es de la app de escritorio, que los mueve y borra.
+    // En la web el usuario elige los zips en el navegador y se suben de uno en uno a /api/web/import-zip
     if (path === '/api/zips') return json([])
-    if (path === '/api/zips/import') return new Response('Importar no está disponible en la versión web', { status: 501 })
+    if (path === '/api/zips/import') return new Response('En la versión web los zips se importan con /api/web/import-zip', { status: 501 })
+    if (path === '/api/web/import-zip') return await importZip(request)
     if (path.startsWith('/reports/')) return await serveReportFile(request, path.slice('/reports/'.length))
     await ensureState()
     const res = await runMiddleware(request, path)

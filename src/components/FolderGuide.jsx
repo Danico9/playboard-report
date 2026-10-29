@@ -63,7 +63,7 @@ const EXAMPLES = [
       [2, '2026-09-23_…', true, 'sin playwright-reports/'],
       [3, 'index.html', false],
     ],
-    fix: 'Cada reporte va dentro de reports/playwright-reports/. Los zips del CI hay que descomprimirlos ahí (la app de escritorio lo hace con «Importar»).',
+    fix: 'Cada reporte va dentro de reports/playwright-reports/. Los zips del CI se descomprimen ahí con «Importar».',
   },
 ]
 

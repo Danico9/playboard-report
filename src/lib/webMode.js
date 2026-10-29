@@ -145,6 +145,17 @@ export async function reloadData() {
   setGate({ ...gate, timings: await r.json() })
 }
 
+// «Importar» en la web: el service worker descomprime el zip en reports/playwright-reports/ de la carpeta elegida
+export async function importZipFile(file) {
+  const r = await fetch(appUrl(`api/web/import-zip?name=${encodeURIComponent(file.name)}`), {
+    method: 'POST',
+    headers: { 'x-playboard': '1' },
+    body: file,
+  })
+  if (!r.ok) throw new Error(`${r.status} ${await r.text()}`)
+  return r.json()
+}
+
 // Volver a la bienvenida para elegir otra carpeta
 export async function changeFolder() {
   await clearRoot()

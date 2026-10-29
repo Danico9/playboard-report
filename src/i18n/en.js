@@ -390,6 +390,15 @@ export default {
   'No contiene ningún reporte HTML de Playwright': 'Contains no Playwright HTML report',
   'Contiene otros zips en vez de reportes: descomprímelo en reports/ y aparecerán aquí para importarlos': 'Contains other zips instead of reports: extract it into reports/ and they will show up here to import',
   'No se puede leer (¿aún se está copiando?):': 'Cannot be read (is it still being copied?):',
+  'no contiene ningún reporte HTML de Playwright': 'contains no Playwright HTML report',
+  'contiene otros zips en vez de reportes: descomprímelo e importa los zips que hay dentro': 'contains other zips instead of reports: extract it and import the zips inside',
+  'Elige ficheros .zip con reportes de Playwright.': 'Choose .zip files with Playwright reports.',
+  'Elige los zips de artefactos del CI: sus reportes se descomprimen en reports/playwright-reports/ de la carpeta que usas. El zip no se borra ni se cambia nada más.':
+    'Choose your CI artifact zips: their reports are extracted into reports/playwright-reports/ in the folder you are using. The zip is not deleted and nothing else is changed.',
+  'Importando {name}… ({i} de {n})': 'Importing {name}… ({i} of {n})',
+  'Arrastra aquí los zips o': 'Drop the zips here or',
+  'Elegir zips…': 'Choose zips…',
+  'Si un reporte ya está en el dashboard (misma fecha y hora de inicio), no se duplica.': 'If a report is already in the dashboard (same start date and time), it is not duplicated.',
 
   // ─── Guías ───
   '¿Cómo añado mis reportes?': 'How do I add my reports?',
@@ -592,6 +601,6 @@ export default {
   'Se ven los reportes, pero no las notas: pon notes/ al lado de reports/, no dentro.': 'The reports are shown, but not the notes: put notes/ next to reports/, not inside it.',
   'Reportes sueltos en reports/': 'Loose reports in reports/',
   'sin playwright-reports/': 'no playwright-reports/',
-  'Cada reporte va dentro de reports/playwright-reports/. Los zips del CI hay que descomprimirlos ahí (la app de escritorio lo hace con «Importar»).':
-    'Each report goes inside reports/playwright-reports/. CI zips have to be unzipped there (the desktop app does it with “Import”).',
+  'Cada reporte va dentro de reports/playwright-reports/. Los zips del CI se descomprimen ahí con «Importar».':
+    'Each report goes inside reports/playwright-reports/. CI zips are extracted there with “Import”.',
 }

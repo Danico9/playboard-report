@@ -27,8 +27,8 @@ El reporte HTML de Playwright es muy completo, pero solo muestra una ejecución.
 | **Módulos**: salud de cada área y todos sus tests | **Entornos**: ponles nombre o fusiónalos |
 | ![Resumen en modo claro](docs/screenshots/overview-light.png) | ![Resumen con la interfaz en inglés](docs/screenshots/overview-dark-en.png) |
 | **Modo claro** | **Interfaz en inglés** |
-| ![Pantalla de bienvenida de la versión web](docs/screenshots/web-welcome-dark.png) | |
-| **Versión web**: elige tu carpeta o mira los datos de ejemplo | |
+| ![Pantalla de bienvenida de la versión web](docs/screenshots/web-welcome-dark.png) | ![Importar zips en la versión web](docs/screenshots/web-import-dark.png) |
+| **Versión web**: elige tu carpeta o mira los datos de ejemplo | **Importar** en la versión web: elige o arrastra los zips |
 
 </details>
 
@@ -360,7 +360,7 @@ pruebas-app/                 ← elige esta
 - ✓ También vale elegir la propia `reports/`, pero entonces no se ven las notas (el navegador no deja subir a la carpeta de arriba).
 - ✕ Si `reports/` y `notes/` están en una subcarpeta (`pruebas-app/prueba2/reports/`), elige esa subcarpeta (`prueba2`).
 - ! Si `notes/` está dentro de `reports/`, se ven los reportes pero no las notas: ponla al lado.
-- ✕ Los reportes tienen que estar en `reports/playwright-reports/`, no sueltos en `reports/`. Los zips del CI hay que descomprimirlos ahí (en la app de escritorio lo hace «Importar»).
+- ✕ Los reportes tienen que estar en `reports/playwright-reports/`, no sueltos en `reports/`. Los zips del CI se descomprimen ahí con **Importar**.
 
 ¿Solo quieres verla? Pulsa **Ver con datos de ejemplo**: carga los datos de `npm run demo` y funciona en cualquier navegador.
 
@@ -372,7 +372,7 @@ Diferencias con la app de escritorio:
 |---|---|---|
 | Navegadores | Cualquiera | Chrome y Edge (otros navegadores, solo los datos de ejemplo) |
 | Reportes nuevos | Se detectan solos | Botón **Recargar datos** |
-| Importar zips del CI | Sí | No: descomprime los artefactos en `reports/playwright-reports/` |
+| Importar zips del CI | Los de `reports/` (y también carpetas); el zip se borra al importarlo | Los que eliges o arrastras en **Importar**; el zip no se borra |
 | Tu configuración (`*.local.js`) | Sí (salvo el ejecutable genérico) | No: módulos y notas con la configuración genérica |
 | Permiso de la carpeta | — | El navegador la recuerda, pero pide permiso de nuevo en cada sesión |
 

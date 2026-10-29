@@ -156,7 +156,9 @@ Navegador ── App React (src/, VITE_PLAYBOARD_WEB) ──fetch <base>/api/*, 
   `App.jsx` envuelve el router en `<WebGate>`: hasta que hay datos se ve la bienvenida (elegir carpeta, seguir con la de la última vez o ver los datos de ejemplo),
   con ejemplos de qué carpeta elegir (`components/FolderGuide.jsx`: árboles de carpetas que funcionan, a medias o no). Al leer otra carpeta, `onFolderLoaded()` avisa a `store.js`,
   que vacía su caché para que no se vean datos de la anterior, y «Cambiar carpeta» vuelve a la raíz de la app.
-  En `Layout` aparecen la marca **Web**, la carpeta con «Recargar datos» y «Cambiar carpeta», y no aparece «Importar». `store.js` no abre `EventSource`.
+  En `Layout` aparecen la marca **Web**, la carpeta con «Recargar datos» y «Cambiar carpeta». «Importar» (`pages/Import.jsx`, `WebImport`) no lista `reports/`:
+  el usuario elige o arrastra zips, `importZipFile()` los envía uno a uno a `POST /api/web/import-zip` (solo en `web/sw.js`), que usa `extractZip()` de la ingesta
+  para descomprimir en `reports/playwright-reports/` los reportes que falten (sin borrar nada) y vuelve a cargar la carpeta. `store.js` no abre `EventSource`.
 - **Descargas y trazas**: Chrome no pasa las descargas por el service worker y el visor de trazas de cada reporte registra su propio service worker (que no existe sin servidor).
   En modo web, «Descargar trace» descarga un `blob:` y «Abrir trace» abre el visor oficial de Playwright publicado en `trace-viewer/` (copiado de `playwright-core`
   al compilar, con su licencia) y le pasa la traza con `postMessage({ method: 'load', params: { trace: Blob } })` cuando avisa con `{ method: 'ready' }`.
@@ -166,7 +168,7 @@ Navegador ── App React (src/, VITE_PLAYBOARD_WEB) ──fetch <base>/api/*, 
   `scripts/serve-web.mjs` (`npm run preview:web`) sirve `dist-web/` como GitHub Pages. `.github/workflows/pages.yml` la publica en cada push a `master`.
 - **Requisito para el código de `server/` y de la ingesta**: solo pueden usar las funciones de `fs` que implementa `web/shims/fs.js` (`existsSync`, `readFileSync`, `writeFileSync`,
   `renameSync`, `rmSync`, `mkdirSync`, `readdirSync`, `statSync`, `createReadStream`, `watch`), `path` POSIX y nada más de Node fuera de las ramas que la web no usa
-  (importar zips, `standalone.mjs`). Si se usa algo nuevo, hay que añadirlo al sustituto y probar `npm run build:web`.
+  (la lista de «Importar» y sus borrados, `standalone.mjs`). Si se usa algo nuevo, hay que añadirlo al sustituto y probar `npm run build:web`.
 
 ## Variables de entorno
 
@@ -178,7 +180,7 @@ Navegador ── App React (src/, VITE_PLAYBOARD_WEB) ──fetch <base>/api/*, 
 | `PLAYBOARD_PORT` | Puerto del servidor de `npm start` y del ejecutable (por defecto 4174) |
 | `VITE_PLAYBOARD_DEMO` | La pone `npm run demo`: ignora los `*.local.js` y usa los nombres de módulo de la demo |
 | `VITE_PLAYBOARD_NO_LOCAL` | La ponen `build:exe:generic` y `build:web`: compila sin los `*.local.js` |
-| `VITE_PLAYBOARD_WEB` | La pone `build:web`: versión web (bienvenida, service worker, sin «Importar») |
+| `VITE_PLAYBOARD_WEB` | La pone `build:web`: versión web (bienvenida, service worker, «Importar» con zips elegidos en el navegador) |
 | `PLAYBOARD_WEB_BASE` | Base de la versión web (p. ej. `playboard-report`), si no se pasa `--base` |
 
 ## Datos de demostración

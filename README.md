@@ -406,4 +406,4 @@ Este proyecto se ha desarrollado con la ayuda de [Claude Code](https://claude.co
 
 ## Licencia
 
-[MIT](LICENSE) © 2026 Daniel Ciscar Blazquez
+© 2026 Daniel Ciscar Blazquez. Todos los derechos reservados: puedes usar la [versión web](https://danico9.github.io/playboard-report/), pero no copiar, modificar ni redistribuir el código sin permiso del autor (ver [LICENSE](LICENSE)).

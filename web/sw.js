@@ -162,6 +162,54 @@ async function runMiddleware(request, path) {
   })
 }
 
+// Los reportes y sus adjuntos (HTML, SVG…) pueden venir de otros: se abren en un origen aislado (CSP sandbox) para que
+// su JavaScript no comparta el de la app ni llegue al permiso sobre la carpeta (IndexedDB/OPFS). A capturas y vídeos
+// dentro de la app no les afecta. El visor de trazas de la web es el publicado (trace-viewer/), no el del reporte.
+const ISOLATED = {
+  'Content-Security-Policy': 'sandbox allow-scripts allow-popups allow-popups-to-escape-sandbox allow-downloads allow-forms allow-modals',
+  'X-Content-Type-Options': 'nosniff',
+}
+
+// Un documento aislado no puede usar localStorage (el reporte de Playwright lo usa y se quedaría en blanco):
+// a cada HTML se le añade delante uno en memoria, que solo dura mientras está abierta la pestaña. Playwright guarda ahí
+// su tema y «Merge files»: el tema se toma de ?theme= (lo pone la app, ver originalReportUrl) y, si no, oscuro.
+const STORAGE_SHIM = `<script>(() => {
+  try { localStorage } catch {
+    // Playwright lee y escribe localStorage[clave]: los datos son propiedades y los métodos van en el prototipo
+    const memory = () => Object.create({
+      get length() { return Object.keys(this).length },
+      key(i) { return Object.keys(this)[i] ?? null },
+      getItem(k) { return Object.hasOwn(this, k) ? this[k] : null },
+      setItem(k, v) { this[k] = String(v) },
+      removeItem(k) { delete this[k] },
+      clear() { for (const k of Object.keys(this)) delete this[k] },
+    })
+    for (const name of ['localStorage', 'sessionStorage']) Object.defineProperty(window, name, { value: memory(), configurable: true })
+    localStorage.theme = new URLSearchParams(location.search).get('theme') === 'light' ? 'light-mode' : 'dark-mode'
+  }
+})()</script>`
+
+// El visor de trazas que va dentro de cada reporte (trace/index.html) no funciona aislado (scripts de módulo y su propio
+// service worker): el enlace «View trace» del reporte abre en su lugar esta página de la app, que carga la traza
+// (solo de reports/) en el visor publicado (trace-viewer/), igual que «Abrir trace» (openTraceViewer en src/lib/webMode.js)
+const traceLauncher = () => new Response(`<!doctype html>
+<html><head><meta charset="utf-8"><title>Playwright Trace Viewer</title>
+<style>html, body, iframe { margin: 0; width: 100%; height: 100%; border: 0; display: block }</style></head>
+<body><iframe id="viewer" src="${BASE}trace-viewer/index.html"></iframe>
+<script>(() => {
+  const param = new URLSearchParams(location.search).get('trace')
+  const url = param && new URL(param, location.href)
+  if (!url || url.origin !== location.origin || !url.pathname.startsWith(${JSON.stringify(BASE + 'reports/')})) return
+  const viewer = document.getElementById('viewer')
+  let blob = null
+  let ready = false
+  const send = () => { if (blob && ready) viewer.contentWindow.postMessage({ method: 'load', params: { trace: blob } }, location.origin) }
+  addEventListener('message', (e) => {
+    if (e.source === viewer.contentWindow && e.data?.method === 'ready') { ready = true; send() }
+  })
+  fetch(url).then((r) => (r.ok ? r.blob() : Promise.reject(new Error(r.status)))).then((b) => { blob = b; send() })
+})()</script></body></html>`, { headers: { 'Content-Type': 'text/html; charset=utf-8' } })
+
 // reports/**: se leen directamente de la carpeta (capturas, vídeos con Range, el reporte original…)
 async function serveReportFile(request, rel) {
   const parts = decodeURIComponent(rel).split('/').filter(Boolean)
@@ -179,10 +227,11 @@ async function serveReportFile(request, rel) {
       if (start > end || start >= file.size) return new Response(null, { status: 416, headers: { 'Content-Range': `bytes */${file.size}` } })
       return new Response(file.slice(start, end + 1), {
         status: 206,
-        headers: { 'Content-Type': type, 'Content-Range': `bytes ${start}-${end}/${file.size}`, 'Accept-Ranges': 'bytes', 'Content-Length': String(end - start + 1) },
+        headers: { ...ISOLATED, 'Content-Type': type, 'Content-Range': `bytes ${start}-${end}/${file.size}`, 'Accept-Ranges': 'bytes', 'Content-Length': String(end - start + 1) },
       })
     }
-    return new Response(file, { headers: { 'Content-Type': type, 'Accept-Ranges': 'bytes', 'Content-Length': String(file.size) } })
+    if (ext === '.html' || ext === '.htm') return new Response(STORAGE_SHIM + (await file.text()), { headers: { ...ISOLATED, 'Content-Type': type } })
+    return new Response(file, { headers: { ...ISOLATED, 'Content-Type': type, 'Accept-Ranges': 'bytes', 'Content-Length': String(file.size) } })
   } catch {
     return new Response('No encontrado', { status: 404 })
   }
@@ -201,6 +250,7 @@ async function handle(request, path) {
       return json(state.timings)
     }
     if (path === '/api/web/add-zip') return await addZip(request)
+    if (/^\/reports\/.+\/trace\/index\.html$/.test(path)) return traceLauncher()
     if (path.startsWith('/reports/')) return await serveReportFile(request, path.slice('/reports/'.length))
     await ensureState()
     if (path === '/api/info') return json({ ...(await (await runMiddleware(request, path)).json()), ...(await folderLabels()) })

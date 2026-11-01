@@ -184,6 +184,11 @@ export async function downloadFile(url) {
   setTimeout(() => URL.revokeObjectURL(a.href), 60000)
 }
 
+// Reporte HTML original de una ejecución. En la web se abre aislado y sin localStorage propio (ver web/sw.js):
+// se le pasa el tema de la app para que no salga siempre en claro
+export const originalReportUrl = (id, theme) =>
+  appUrl(`/reports/playwright-reports/${encodeURIComponent(id)}/index.html`) + (WEB_MODE ? `?theme=${theme}` : '')
+
 // Visor de trazas de Playwright publicado junto a la web (trace-viewer/, copiado de playwright-core al compilar):
 // avisa con {method:'ready'} a la ventana que lo abrió y acepta la traza con {method:'load', params:{trace: Blob}}
 export function openTraceViewer(url) {

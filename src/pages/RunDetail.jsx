@@ -14,7 +14,8 @@ import { t } from '../i18n'
 import { IssueBadge } from '../components/KnownIssues'
 import { ReviewToggle } from '../components/Review'
 import { isReviewable, useReviews, verdictOf } from '../lib/reviews'
-import { appUrl } from '../lib/webMode'
+import { appUrl, originalReportUrl } from '../lib/webMode'
+import { useTheme } from '../lib/theme'
 
 const SEVERITY = { failed: 0, flaky: 1, skipped: 2, passed: 3 }
 const DEFAULT_STATUSES = ['failed']
@@ -27,6 +28,7 @@ export default function RunDetail() {
   const { id } = useParams()
   const location = useLocation()
   const [params, setParams] = useSearchParams()
+  const theme = useTheme()
   const { data: summary } = useSummary()
   const res = useRunDetail(id)
   const knownIssues = useKnownIssues()
@@ -159,7 +161,7 @@ export default function RunDetail() {
             🖶 {t('Informe / PDF')}
           </a>
           {run.buildHref && <a className="btn"href={run.buildHref} target="_blank" rel="noreferrer">{t('Job del CI')} ↗</a>}
-          <a className="btn primary" href={appUrl(`/reports/playwright-reports/${encodeURIComponent(run.id)}/index.html`)} target="_blank" rel="noreferrer">{t('Reporte original de Playwright')} ↗</a>
+          <a className="btn primary" href={originalReportUrl(run.id, theme)} target="_blank" rel="noreferrer">{t('Reporte original de Playwright')} ↗</a>
         </div>
       </div>
 

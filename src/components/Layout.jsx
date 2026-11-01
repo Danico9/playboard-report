@@ -7,6 +7,7 @@ import { fmtDate, plural } from '../lib/format'
 import { setTheme, useTheme } from '../lib/theme'
 import { WEB_MODE, appUrl, changeFolder, reloadData, useWebGate } from '../lib/webMode'
 import { setLang, t, useLang } from '../i18n'
+import { COPYRIGHT } from '../config/author'
 
 const I = {
   overview: <path d="M3 13h4v8H3zM10 8h4v13h-4zM17 3h4v18h-4z" />,
@@ -127,6 +128,7 @@ export default function Layout() {
               {last && <><br />{t('Última')}: {fmtDate(last.date)} {last.time}</>}
             </>
           )}
+          <div className="copyright">{COPYRIGHT}</div>
         </div>
       </aside>
       <main className="main">

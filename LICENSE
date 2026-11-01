@@ -1,21 +1,29 @@
-MIT License
+Copyright (c) 2026 Daniel Ciscar Blazquez. Todos los derechos reservados.
 
-Copyright (c) 2026 Daniel Ciscar Blazquez
+Este software y su documentación son propiedad de Daniel Ciscar Blazquez. Se permite usar la versión
+publicada de la aplicación (https://danico9.github.io/playboard-report/) para uso personal o profesional.
+No se permite copiar, modificar, redistribuir, publicar, sublicenciar ni vender el software, en todo o
+en parte (incluido el código que el navegador descarga para ejecutar la aplicación), sin el permiso
+previo y por escrito del autor.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+El software se ofrece «tal cual», sin garantías de ningún tipo. En ningún caso el autor será
+responsable de daños derivados de su uso.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+Los componentes de terceros que se incluyen (por ejemplo, el visor de trazas de Playwright, Apache-2.0)
+conservan sus propias licencias.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+---
+
+Copyright (c) 2026 Daniel Ciscar Blazquez. All rights reserved.
+
+This software and its documentation are the property of Daniel Ciscar Blazquez. You may use the
+published version of the application (https://danico9.github.io/playboard-report/) for personal or
+professional purposes. You may not copy, modify, redistribute, publish, sublicense or sell the
+software, in whole or in part (including the code the browser downloads to run the application),
+without the author's prior written permission.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND. IN NO EVENT SHALL THE AUTHOR BE
+LIABLE FOR ANY DAMAGES ARISING FROM ITS USE.
+
+Third-party components included (for example, the Playwright trace viewer, Apache-2.0) keep their
+own licenses.

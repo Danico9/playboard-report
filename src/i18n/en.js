@@ -576,8 +576,7 @@ export default {
   'Ver con datos de ejemplo': 'Try it with sample data',
   'El navegador recuerda la carpeta, pero pide permiso de nuevo en cada sesión.': 'The browser remembers the folder, but asks for permission again in each session.',
   'Este navegador no permite abrir carpetas: usa Chrome o Edge para ver tus reportes, o la app de escritorio.': 'This browser cannot open folders: use Chrome or Edge to see your reports, or the desktop app.',
-  'playboard-report es un proyecto de código abierto (MIT). También hay una app de escritorio con importación de zips y avisos en vivo:':
-    'playboard-report is an open source project (MIT). There is also a desktop app with zip import and live updates:',
+  'Todos los derechos reservados.': 'All rights reserved.',
   '«{name}» no tiene reportes. Elige la carpeta que contiene reports/ y notes/ (o la propia reports/).': '“{name}” has no reports. Choose the folder that contains reports/ and notes/ (or reports/ itself).',
   'Sin permiso para leer la carpeta.': 'No permission to read the folder.',
   'Qué carpeta elegir': 'Which folder to choose',

@@ -6,9 +6,8 @@ import { useEffect } from 'react'
 import { appUrl, canPickFolder, loadDemo, pickFolder, resumeFolder, startWeb, useWebGate, webSupported } from '../lib/webMode'
 import { setTheme, useTheme } from '../lib/theme'
 import FolderGuide from './FolderGuide'
+import { COPYRIGHT } from '../config/author'
 import { getLang, setLang, t, useLang } from '../i18n'
-
-const REPO = 'https://github.com/Danico9/playboard-report'
 
 function Explanation() {
   if (getLang() === 'en') {
@@ -129,10 +128,7 @@ function Welcome({ gate }) {
 
         <Explanation />
 
-        <p className="small muted">
-          {t('playboard-report es un proyecto de código abierto (MIT). También hay una app de escritorio con importación de zips y avisos en vivo:')}{' '}
-          <a href={REPO} target="_blank" rel="noreferrer">GitHub ↗</a>
-        </p>
+        <p className="small muted">{COPYRIGHT} · {t('Todos los derechos reservados.')}</p>
       </div>
     </div>
   )

@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "description": "Dashboard local en modo oscuro para analizar el histórico de reportes HTML de Playwright (por día, semana, mes y año) y consultar notas Markdown.",
-  "license": "MIT",
+  "license": "SEE LICENSE IN LICENSE",
   "author": "Daniel Ciscar Blazquez",
   "keywords": [
     "playwright",

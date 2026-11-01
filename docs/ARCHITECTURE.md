@@ -143,7 +143,7 @@ Navegador ── App React (src/, VITE_PLAYBOARD_WEB) ──fetch <base>/api/*, 
 ```
 
 - **`web/sw.js`**: responde a `<base>/api/*` ejecutando el **middleware real** de `server/api.mjs` (adapta `Request`/`Response` a los `req`/`res` de Node),
-  y a `<base>/reports/**` leyendo el fichero de la carpeta (con `Range`, para los vídeos). Añade `/api/web/reload` (vuelve a leer la carpeta), contesta `204` a `/api/events`
+  y a `<base>/reports/**` leyendo el fichero de la carpeta (con `Range`, para los vídeos, y la cabecera `Content-Security-Policy: sandbox`: un reporte o un adjunto HTML/SVG se abre en un origen aislado y su JavaScript no puede usar el permiso sobre la carpeta). Como un documento aislado no tiene `localStorage`, a cada HTML se le antepone uno en memoria, con el tema que pasa la app (`?theme=`, `originalReportUrl()`). El visor de trazas del reporte (`trace/index.html`) no funciona aislado: el service worker sirve en su lugar una página propia que carga la traza en el visor publicado (`trace-viewer/`). Añade `/api/web/reload` (vuelve a leer la carpeta), contesta `204` a `/api/events`
   (no hay avisos en vivo) y `POST /api/web/add-zip` («Añadir zips…» de Importar: copia en `reports/` un zip elegido en el navegador). Antes de `/api/zips` y
   `/api/zips/import` vuelve a mirar qué hay suelto en `reports/` y lee los zips (`loadLoose()`): «Importar» es el de escritorio, con los mismos borrados y movimientos.
   En `/api/info` cambia las rutas internas (`/data/…`) por el nombre de la carpeta elegida, para la guía de Importar. Las navegaciones a rutas de la app devuelven siempre el `index.html`.

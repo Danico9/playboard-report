@@ -90,6 +90,8 @@ El módulo que se muestra lo decide el cliente (`moduleOfTest` en `src/config/mo
 
 ## API local (`server/api.mjs`)
 
+`/api/*` y `/reports/**` solo responden si la cabecera `Host` es `localhost` o una IP (si no, 403), para evitar el *DNS rebinding*; en la versión web (service worker) no hay cabecera `Host`. `/api/notes/file` se sirve con `Content-Security-Policy: sandbox`: una nota HTML o SVG abierta directamente no ejecuta JavaScript en el origen de la app.
+
 | Ruta | Respuesta |
 |---|---|
 | `GET /api/summary` | `summary.json` con los entornos aplicados (`run.env`, `environments`) |

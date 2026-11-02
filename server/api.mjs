@@ -19,6 +19,16 @@ export const MIME = {
   '.mjs': 'text/javascript', '.webmanifest': 'application/manifest+json',
 }
 
+// Solo se atiende a la API con el nombre del propio equipo (localhost o una IP): evita el «DNS rebinding»,
+// en el que una web maliciosa hace que su dominio apunte a 127.0.0.1 para leer la API desde el navegador.
+// En la versión web (service worker) la petición no lleva cabecera Host.
+const LOCAL_HOST = /^(localhost|[a-z0-9-]+\.localhost|\d{1,3}(\.\d{1,3}){3}|\[[0-9a-f:.]+\])(:\d+)?$/i
+const isLocalHost = (host) => host == null || LOCAL_HOST.test(host)
+
+// Las notas pueden venir de otros: si se abre una directamente (HTML, SVG…), su JavaScript no se ejecuta en el
+// origen de la app (CSP sandbox), igual que los reportes de la versión web
+const NOTE_HEADERS = { 'Content-Security-Policy': 'sandbox', 'X-Content-Type-Options': 'nosniff' }
+
 function safeJoin(base, rel) {
   const p = path.resolve(base, '.' + path.sep + decodeURIComponent(rel))
   return p === base || p.startsWith(base + path.sep) ? p : null
@@ -221,6 +231,10 @@ export function createApi({ log = console.log } = {}) {
   const middleware = async (req, res, next) => {
     const url = new URL(req.url, 'http://localhost')
     const p = url.pathname
+    if ((p.startsWith('/api/') || p.startsWith('/reports/')) && !isLocalHost(req.headers.host)) {
+      res.statusCode = 403
+      return res.end('Petición no permitida')
+    }
     try {
       if (p === '/api/events') {
         res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' })
@@ -242,7 +256,10 @@ export function createApi({ log = console.log } = {}) {
         return sendFile(res, safeJoin(path.join(CACHE_DIR, 'runs'), `${id}.json`))
       }
       if (p === '/api/notes') return sendJson(res, notesIndex())
-      if (p === '/api/notes/file') return sendFile(res, safeJoin(NOTES_DIR, url.searchParams.get('path') ?? ''))
+      if (p === '/api/notes/file') {
+        for (const [k, v] of Object.entries(NOTE_HEADERS)) res.setHeader(k, v)
+        return sendFile(res, safeJoin(NOTES_DIR, url.searchParams.get('path') ?? ''))
+      }
       if (p === '/api/notes/search') return sendJson(res, searchNotes(url.searchParams.get('q') ?? ''))
       if (p === '/api/info') return sendJson(res, { timeZone: TIME_ZONE, reportsDir: REPORTS_DIR, runsDir: RUNS_DIR, notesDir: NOTES_DIR })
       // Elementos importables: zips y carpetas sueltas de reports/

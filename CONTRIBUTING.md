@@ -43,7 +43,7 @@ npm run demo
 - La versión web ejecuta `server/` y la ingesta en un service worker, con `node:fs` sustituido por `web/shims/fs.js`: usa solo las funciones de `fs` que implementa (ver `docs/ARCHITECTURE.md`) o añádelas allí.
 - Toda URL absoluta de la app (`/api/…`, `/reports/…`, un enlace que se abre en otra pestaña) pasa por `appUrl()` (`src/lib/webMode.js`): en GitHub Pages la app no está en la raíz.
 - `server/` y `scripts/ingest-reports.mjs` se empaquetan en CommonJS para el ejecutable: nada de `import.meta` fuera de ramas que solo corran sin `PLAYBOARD_ROOT`, ni top-level `await` en `server/`.
-- Toda ruta de fichero que llegue a la API se valida para no salir de su carpeta. Las acciones que modifican datos van por `POST` con la cabecera `x-playboard: 1`.
+- Toda ruta de fichero que llegue a la API se valida para no salir de su carpeta. Las acciones que modifican datos van por `POST` con la cabecera `x-playboard: 1`. La API solo responde si la cabecera `Host` es `localhost` o una IP (contra el *DNS rebinding*), y los ficheros de notas se sirven con `CSP sandbox`.
 - Lo que el usuario decide desde la interfaz y tiene que durar se guarda en `reports/` (hoy `reports/environments.json` y `reports/reviews.json`), nunca en `.cache/`, que se puede borrar y regenerar.
 - Las comparaciones entre ejecuciones (fallos nuevos, anterior/siguiente) se hacen dentro del mismo entorno (`adjacentRunIndex()` en `src/lib/stats.js`), y las pantallas nuevas de reportes filtran por entorno con `useReport()`.
 - Las listas que crecen con el histórico se paginan con `usePagination()`/`paginate()` (`src/lib/usePagination.js`) y `<Pagination>` (`src/components/ui.jsx`). Excepción: el informe imprimible (`src/pages/RunReport.jsx`), que muestra todo.
